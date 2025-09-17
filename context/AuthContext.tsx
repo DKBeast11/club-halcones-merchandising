@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -12,7 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   lastActivity: number;
-  login: (password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateActivity: () => void;
 }
@@ -20,7 +21,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTO_LOGOUT_MINUTES = parseInt(process.env.NEXT_PUBLIC_AUTO_LOGOUT_MINUTES || '10');
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'F18-Eurofighter-2024';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -28,35 +28,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading: false,
     lastActivity: Date.now()
   });
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  // Función de login
-  const login = useCallback((password: string): boolean => {
-    console.log('Login attempt with password:', password);
-    console.log('Expected password:', ADMIN_PASSWORD);
-    
-    if (password === ADMIN_PASSWORD) {
-      const now = Date.now();
+  // Login usando Supabase y la tabla admins
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    setAuthState((prev) => ({ ...prev, isLoading: true }));
+    try {
+      // Buscar admin por email
+      const { data: admin, error } = await supabase
+        .from('admins')
+        .select('id, password_hash')
+        .eq('email', email)
+        .single();
+      console.log('Resultado consulta admin:', admin);
+      if (error || !admin) {
+        console.log('Error o admin no encontrado:', error);
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        return false;
+      }
+      console.log('Comparando:', admin.password_hash, password);
+      // Verificar password (solo para demo, en producción usar hash seguro)
+      if (admin.password_hash !== password) {
+        console.log('Contraseña incorrecta');
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        return false;
+      }
+      // Crear sesión
+      const sessionToken = Math.random().toString(36).substring(2) + Date.now();
+      await supabase.from('admin_sessions').insert({
+        admin_id: admin.id,
+        session_token: sessionToken,
+        expires_at: new Date(Date.now() + AUTO_LOGOUT_MINUTES * 60 * 1000)
+      });
+      setSessionToken(sessionToken);
       setAuthState({
         isAuthenticated: true,
         isLoading: false,
-        lastActivity: now
+        lastActivity: Date.now()
       });
-      console.log('Login successful');
       return true;
+    } catch (err) {
+      console.log('Error en login:', err);
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+      return false;
     }
-    console.log('Login failed');
-    return false;
   }, []);
 
-  // Función de logout
-  const logout = useCallback(() => {
-    console.log('Logout called');
+  // Logout: eliminar sesión en Supabase
+  const logout = useCallback(async () => {
+    if (sessionToken) {
+      await supabase.from('admin_sessions').delete().eq('session_token', sessionToken);
+    }
+    setSessionToken(null);
     setAuthState({
       isAuthenticated: false,
       isLoading: false,
       lastActivity: Date.now()
     });
-  }, []);
+  }, [sessionToken]);
 
   // Función para actualizar la actividad
   const updateActivity = useCallback(() => {

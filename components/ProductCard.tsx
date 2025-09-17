@@ -14,14 +14,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const stockInfo = getStockStatus(product.stock);
 
   return (
-    <div className="card">
+    <article className="card" aria-label={`Producto: ${product.name}`}>
       <div className="aspect-square relative">
         <img
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover"
         />
-        <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${stockInfo.bgColor} ${stockInfo.color}`}>
+        <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${stockInfo.bgColor} ${stockInfo.color}`} aria-live="polite">
           {product.stock === 0 ? 'AGOTADO' : `${product.stock} uds`}
         </div>
       </div>
@@ -29,7 +29,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4">
         <h3 className="font-bold text-lg mb-2 text-white">{product.name}</h3>
         <p className="text-gray-300 text-sm mb-3 line-clamp-2">{product.description}</p>
-        
         <div className="flex items-center justify-between mb-3">
           <span className="text-2xl font-bold text-blue-400">{product.price.toFixed(2)}€</span>
           <div className={`flex items-center space-x-1 ${stockInfo.color}`}>
@@ -37,11 +36,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span className="text-sm font-medium capitalize">{stockInfo.status}</span>
           </div>
         </div>
-
         {isAdmin && (
           <div className="space-y-2 pt-3 border-t border-gray-700">
             <div className="flex items-center space-x-2">
               <button
+                type="button"
+                aria-label="Restar 1 unidad de stock"
                 onClick={() => updateStock(product.id, product.stock - 1)}
                 className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm transition-colors"
                 disabled={product.stock <= 0}
@@ -50,6 +50,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </button>
               <span className="text-sm text-gray-300 min-w-[60px] text-center">Stock: {product.stock}</span>
               <button
+                type="button"
+                aria-label="Sumar 1 unidad de stock"
                 onClick={() => updateStock(product.id, product.stock + 1)}
                 className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm transition-colors"
               >
@@ -90,7 +92,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </button>
         )}
       </div>
-    </div>
+    </article>
   );
 };
 

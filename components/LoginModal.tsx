@@ -10,6 +10,7 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -19,6 +20,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   // Limpiar estado cuando se abre/cierra el modal
   useEffect(() => {
     if (isOpen) {
+      setEmail('');
       setPassword('');
       setError('');
       setShowPassword(false);
@@ -27,28 +29,29 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) {
-      setError('Por favor, introduce la contraseña');
+    if (!email.trim() || !password.trim()) {
+      setError('Introduce email y contraseña');
       return;
     }
-
     setIsLoading(true);
     setError('');
-
-    // Validar contraseña inmediatamente
-    const success = login(password);
-    if (success) {
-      onClose();
-    } else {
-      setError('Contraseña incorrecta');
-      setPassword('');
+    try {
+      const success = await login(email, password);
+      if (success) {
+        onClose();
+      } else {
+        setError('Credenciales incorrectas');
+        setPassword('');
+      }
+    } catch (err) {
+      setError('Error de autenticación');
     }
     setIsLoading(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSubmit(e);
+      handleSubmit(e as any);
     } else if (e.key === 'Escape') {
       onClose();
     }
@@ -57,7 +60,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-label="Login Administrador">
       <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700 shadow-2xl">
         <div className="flex items-center space-x-3 mb-6">
           <div className="p-2 bg-blue-600 rounded-lg">
@@ -72,7 +75,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Contraseña de Administrador
+              Email de Administrador
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Introduce el email"
+              className="w-full px-3 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
+              autoFocus
+              disabled={isLoading}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Contraseña
             </label>
             <div className="relative">
               <input
@@ -82,7 +100,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 onKeyDown={handleKeyPress}
                 placeholder="Introduce la contraseña"
                 className="w-full px-3 py-3 pr-12 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
-                autoFocus
                 disabled={isLoading}
               />
               <button

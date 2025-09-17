@@ -1,13 +1,13 @@
 export interface Product {
-  id: number;
+  id: string; // UUID en la base de datos
   name: string;
   category: 'parches' | 'camisetas' | 'llaveros';
   price: number;
   stock: number;
-  image: string;
-  description: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  image_url?: string;
+  description?: string;
+  created_at?: string; // ISO string
+  updated_at?: string; // ISO string
 }
 
 export interface Category {
@@ -27,8 +27,8 @@ export interface NewProduct {
   category: 'parches' | 'camisetas' | 'llaveros';
   price: string;
   stock: string;
-  image: string;
-  description: string;
+  image_url?: string;
+  description?: string;
 }
 
 export interface ProductContextType {

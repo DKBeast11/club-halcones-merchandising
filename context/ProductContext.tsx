@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product, NewProduct, ProductContextType, StockStatus } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { useSupabase } from '@/context/SupabaseContext';
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
@@ -63,71 +64,52 @@ const initialNewProduct: NewProduct = {
 };
 
 export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<NewProduct>(initialNewProduct);
   const { isAuthenticated } = useAuth();
+  const { 
+    products, 
+    isLoading, 
+    error, 
+    addProduct: addProductSupabase, 
+    updateProduct: updateProductSupabase, 
+    deleteProduct: deleteProductSupabase, 
+    updateStock: updateStockSupabase 
+  } = useSupabase();
 
-  // Cargar productos desde localStorage al inicializar
-  useEffect(() => {
-    const savedProducts = localStorage.getItem('club-halcones-products');
-    if (savedProducts) {
-      try {
-        const parsedProducts = JSON.parse(savedProducts);
-        setProducts(parsedProducts.map((p: any) => ({
-          ...p,
-          createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
-          updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date()
-        })));
-      } catch (error) {
-        console.error('Error loading products from localStorage:', error);
-        setProducts(initialProducts);
-      }
-    } else {
-      setProducts(initialProducts);
-    }
-  }, []);
+  // Los productos ahora se cargan automáticamente desde Supabase
 
-  // Guardar productos en localStorage cuando cambien
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem('club-halcones-products', JSON.stringify(products));
-    }
-  }, [products]);
-
-  const addProduct = (productData: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    setProducts(prev => [...prev, newProduct]);
+  const addProduct = async (productData: Omit<Product, 'id'>) => {
+    await addProductSupabase(productData);
     setNewProduct(initialNewProduct);
     setShowAddProduct(false);
   };
 
-  const updateProduct = (id: number, updates: Partial<Product>) => {
-    setProducts(prev => prev.map(product => 
-      product.id === id 
-        ? { ...product, ...updates, updatedAt: new Date() }
-        : product
-    ));
+  const updateProduct = async (id: number, updates: Partial<Product>) => {
+    // Convertir ID numérico a string para Supabase
+    const productId = products.find(p => p.id === id)?.id.toString();
+    if (productId) {
+      await updateProductSupabase(productId, updates);
+    }
   };
 
-  const deleteProduct = (id: number) => {
-    setProducts(prev => prev.filter(product => product.id !== id));
+  const deleteProduct = async (id: number) => {
+    // Convertir ID numérico a string para Supabase
+    const productId = products.find(p => p.id === id)?.id.toString();
+    if (productId) {
+      await deleteProductSupabase(productId);
+    }
   };
 
-  const updateStock = (productId: number, newStock: number) => {
-    setProducts(prev => prev.map(product => 
-      product.id === productId 
-        ? { ...product, stock: Math.max(0, newStock), updatedAt: new Date() }
-        : product
-    ));
+  const updateStock = async (productId: number, newStock: number) => {
+    // Convertir ID numérico a string para Supabase
+    const productIdStr = products.find(p => p.id === productId)?.id.toString();
+    if (productIdStr) {
+      await updateStockSupabase(productIdStr, newStock);
+    }
   };
 
   // Función para limpiar el estado cuando se cierra la sesión

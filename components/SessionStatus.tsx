@@ -50,9 +50,9 @@ const SessionStatus: React.FC = () => {
   };
 
   return (
-    <div className={`fixed top-4 left-4 z-40 transition-all duration-300 ${
+    <aside className={`fixed top-4 left-4 z-40 transition-all duration-300 ${
       showWarning ? 'animate-pulse' : ''
-    }`}>
+    }`} aria-live="polite" aria-label="Estado de sesión">
       <div className={`bg-gray-800 border rounded-lg shadow-lg transition-all duration-300 ${
         showWarning 
           ? 'border-red-500 bg-red-900/20' 
@@ -102,7 +102,7 @@ const SessionStatus: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 };
 

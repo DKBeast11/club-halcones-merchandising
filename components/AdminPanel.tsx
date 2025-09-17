@@ -13,18 +13,17 @@ const AdminPanel: React.FC = () => {
     addProduct
   } = useProducts();
 
-  const handleAddProduct = () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.stock) return;
-    
+  const handleAddProduct = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newProduct.name.trim() || !newProduct.price || !newProduct.stock) return;
     const productData = {
-      name: newProduct.name,
+      name: newProduct.name.trim(),
       category: newProduct.category,
       price: parseFloat(newProduct.price),
       stock: parseInt(newProduct.stock),
-      image: newProduct.image || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-      description: newProduct.description
+      image: newProduct.image?.trim() || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+      description: newProduct.description?.trim()
     };
-    
     addProduct(productData);
   };
 
@@ -45,6 +44,8 @@ const AdminPanel: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-red-400">Panel de Administración</h2>
         <button
+          type="button"
+          aria-label={showAddProduct ? 'Cerrar formulario de producto' : 'Abrir formulario de producto'}
           onClick={() => setShowAddProduct(!showAddProduct)}
           className="btn-success flex items-center space-x-2"
         >
@@ -54,7 +55,7 @@ const AdminPanel: React.FC = () => {
       </div>
 
       {showAddProduct && (
-        <div className="bg-gray-700 p-4 rounded-lg space-y-4">
+        <form className="bg-gray-700 p-4 rounded-lg space-y-4" onSubmit={handleAddProduct}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
@@ -105,19 +106,20 @@ const AdminPanel: React.FC = () => {
           />
           <div className="flex space-x-3">
             <button
-              onClick={handleAddProduct}
+              type="submit"
               className="btn-primary"
             >
               Añadir Producto
             </button>
             <button
+              type="button"
               onClick={resetForm}
               className="btn-secondary"
             >
               Cancelar
             </button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );

@@ -17,20 +17,22 @@ const ProductGrid: React.FC = () => {
 
   if (filteredProducts.length === 0) {
     return (
-      <div className="text-center py-12">
+      <section className="text-center py-12" aria-label="Sin productos">
         <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
         <p className="text-gray-400 text-lg">No se encontraron productos</p>
         <p className="text-gray-500">Prueba a cambiar los filtros de búsqueda</p>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredProducts.map(product => (
-        <ProductCard key={product.id} product={product} />
-      ))}
-    </div>
+    <section aria-label="Listado de productos">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredProducts.map(product => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </section>
   );
 };
 
