@@ -34,33 +34,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setAuthState((prev) => ({ ...prev, isLoading: true }));
     try {
-      // Buscar admin por email
-      const { data: admin, error } = await supabase
+      // Login con Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data?.user) {
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        return false;
+      }
+      // Guardar UUID en admins si no existe
+      const uuid = data.user.id;
+      const { data: adminExists } = await supabase
         .from('admins')
-        .select('id, password_hash')
-        .eq('email', email)
+        .select('uuid')
+        .eq('uuid', uuid)
         .single();
-      console.log('Resultado consulta admin:', admin);
-      if (error || !admin) {
-        console.log('Error o admin no encontrado:', error);
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
-        return false;
+      if (!adminExists) {
+        await supabase.from('admins').insert({ uuid, email });
       }
-      console.log('Comparando:', admin.password_hash, password);
-      // Verificar password (solo para demo, en producción usar hash seguro)
-      if (admin.password_hash !== password) {
-        console.log('Contraseña incorrecta');
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
-        return false;
-      }
-      // Crear sesión
-      const sessionToken = Math.random().toString(36).substring(2) + Date.now();
-      await supabase.from('admin_sessions').insert({
-        admin_id: admin.id,
-        session_token: sessionToken,
-        expires_at: new Date(Date.now() + AUTO_LOGOUT_MINUTES * 60 * 1000)
-      });
-      setSessionToken(sessionToken);
       setAuthState({
         isAuthenticated: true,
         isLoading: false,
@@ -68,7 +57,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       return true;
     } catch (err) {
-      console.log('Error en login:', err);
       setAuthState((prev) => ({ ...prev, isLoading: false }));
       return false;
     }

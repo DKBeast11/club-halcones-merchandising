@@ -40,9 +40,9 @@ export interface ProductContextType {
   editingProduct: Product | null;
   newProduct: NewProduct;
   addProduct: (product: Omit<Product, 'id'>) => void;
-  updateProduct: (id: number, updates: Partial<Product>) => void;
-  deleteProduct: (id: number) => void;
-  updateStock: (productId: number, newStock: number) => void;
+  updateProduct: (id: string, updates: Partial<Product>) => void;
+  deleteProduct: (id: string) => void;
+  updateStock: (productId: string, newStock: number) => void;
   setSearchTerm: (term: string) => void;
   setSelectedCategory: (category: string) => void;
   setShowAddProduct: (show: boolean) => void;

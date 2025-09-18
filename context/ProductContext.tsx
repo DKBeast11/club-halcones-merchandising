@@ -9,48 +9,48 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 const initialProducts: Product[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Parche F-18 Super Hornet',
     category: 'parches',
     price: 12.99,
     stock: 25,
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+  image_url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
     description: 'Parche bordado oficial del F-18 Super Hornet',
-    createdAt: new Date(),
-    updatedAt: new Date()
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
   },
   {
-    id: 2,
+    id: '2',
     name: 'Camiseta Eurofighter Typhoon',
     category: 'camisetas',
     price: 24.99,
     stock: 15,
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
+  image_url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
     description: 'Camiseta negra con diseño del Eurofighter Typhoon',
-    createdAt: new Date(),
-    updatedAt: new Date()
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
   },
   {
-    id: 3,
+    id: '3',
     name: 'Llavero F-18 Metálico',
     category: 'llaveros',
     price: 8.99,
     stock: 3,
-    image: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop',
+  image_url: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop',
     description: 'Llavero metálico con forma de F-18',
-    createdAt: new Date(),
-    updatedAt: new Date()
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
   },
   {
-    id: 4,
+    id: '4',
     name: 'Parche Escuadrón Ala 15',
     category: 'parches',
     price: 10.99,
     stock: 0,
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+  image_url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
     description: 'Parche oficial del Escuadrón Ala 15',
-    createdAt: new Date(),
-    updatedAt: new Date()
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
   }
 ];
 
@@ -59,7 +59,7 @@ const initialNewProduct: NewProduct = {
   category: 'parches',
   price: '',
   stock: '',
-  image: '',
+  image_url: '',
   description: ''
 };
 
@@ -88,25 +88,22 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setShowAddProduct(false);
   };
 
-  const updateProduct = async (id: number, updates: Partial<Product>) => {
-    // Convertir ID numérico a string para Supabase
-    const productId = products.find(p => p.id === id)?.id.toString();
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    const productId = products.find(p => p.id === id)?.id;
     if (productId) {
       await updateProductSupabase(productId, updates);
     }
   };
 
-  const deleteProduct = async (id: number) => {
-    // Convertir ID numérico a string para Supabase
-    const productId = products.find(p => p.id === id)?.id.toString();
+  const deleteProduct = async (id: string) => {
+    const productId = products.find(p => p.id === id)?.id;
     if (productId) {
       await deleteProductSupabase(productId);
     }
   };
 
-  const updateStock = async (productId: number, newStock: number) => {
-    // Convertir ID numérico a string para Supabase
-    const productIdStr = products.find(p => p.id === productId)?.id.toString();
+  const updateStock = async (productId: string, newStock: number) => {
+    const productIdStr = products.find(p => p.id === productId)?.id;
     if (productIdStr) {
       await updateStockSupabase(productIdStr, newStock);
     }

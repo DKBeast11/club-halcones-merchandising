@@ -39,15 +39,15 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       // Convertir los datos de Supabase al formato de Product
       const formattedProducts: Product[] = data?.map(item => ({
-        id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16), // Convertir UUID a número
+        id: item.id,
         name: item.name,
         category: item.category,
         price: parseFloat(item.price),
         stock: item.stock,
-        image: item.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+        image_url: item.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
         description: item.description || '',
-        createdAt: new Date(item.created_at),
-        updatedAt: new Date(item.updated_at)
+        created_at: item.created_at,
+        updated_at: item.updated_at
       })) || [];
 
       setProducts(formattedProducts);
@@ -61,32 +61,27 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Añadir producto
   const addProduct = async (productData: Omit<Product, 'id'>) => {
-    try {
-      setError(null);
-      
-      const { data, error } = await supabase
-        .from('products')
-        .insert([{
-          name: productData.name,
-          category: productData.category,
-          price: productData.price,
-          stock: productData.stock,
-          image_url: productData.image,
-          description: productData.description
-        }])
-        .select()
-        .single();
+    setError(null);
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{
+        name: productData.name,
+        category: productData.category,
+        price: productData.price,
+        stock: productData.stock,
+        image_url: productData.image_url,
+        description: productData.description
+      }])
+      .select()
+      .single();
 
-      if (error) {
-        throw error;
-      }
-
-      // Recargar productos
-      await loadProducts();
-    } catch (err) {
-      console.error('Error adding product:', err);
-      setError(err instanceof Error ? err.message : 'Error al añadir producto');
+    if (error) {
+      setError(error.message);
+      throw new Error(error.message);
     }
+
+    // Recargar productos
+    await loadProducts();
   };
 
   // Actualizar producto
@@ -99,7 +94,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       if (updates.category) updateData.category = updates.category;
       if (updates.price !== undefined) updateData.price = updates.price;
       if (updates.stock !== undefined) updateData.stock = updates.stock;
-      if (updates.image) updateData.image_url = updates.image;
+  if (updates.image_url) updateData.image_url = updates.image_url;
       if (updates.description) updateData.description = updates.description;
 
       const { error } = await supabase
