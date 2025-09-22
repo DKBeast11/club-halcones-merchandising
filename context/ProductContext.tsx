@@ -69,7 +69,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<NewProduct>(initialNewProduct);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { 
     products, 
     isLoading, 
@@ -126,7 +126,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const value: ProductContextType = {
     products,
-    isAdmin: isAuthenticated,
+    isAdmin: isAuthenticated && !!user,
     searchTerm,
     selectedCategory,
     showAddProduct,

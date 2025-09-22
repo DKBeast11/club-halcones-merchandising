@@ -1,68 +1,32 @@
 'use client';
-import * as React from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
+
 const AdminPanel: React.FC = () => {
-  const [isAdmin, setIsAdmin] = React.useState(false);
-  const [loadingAdmin, setLoadingAdmin] = React.useState(true);
-  React.useEffect(() => {
-    async function checkAdmin() {
-      // @ts-ignore
-      const { supabase } = await import('@/lib/supabase');
-      const { data: userData } = await supabase.auth.getUser();
-      const uuid = userData?.user?.id;
-      if (!uuid) {
-        setIsAdmin(false);
-        setLoadingAdmin(false);
-        return;
-      }
-      const { data: admin } = await supabase
-        .from('admins')
-        .select('uuid')
-        .eq('uuid', uuid)
-        .single();
-      setIsAdmin(!!admin);
-      setLoadingAdmin(false);
-    }
-    checkAdmin();
-  }, []);
+  const { isAdmin, addProduct } = useProducts();
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Mostrar el UUID del usuario autenticado en la consola
-  React.useEffect(() => {
-    async function getUserId() {
-      // @ts-ignore
-      const { supabase } = await import('@/lib/supabase');
-      const { data } = await supabase.auth.getUser();
-      console.log('Mi UUID:', data?.user?.id);
-    }
-    getUserId();
-  }, []);
-
-  // Estados y lógica del formulario
-  const [showAddProduct, setShowAddProduct] = React.useState(false);
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [newProduct, setNewProduct] = React.useState<{
-    name: string;
-    category: 'parches' | 'camisetas' | 'llaveros';
-    price: string;
-    stock: string;
-    image_url: string;
-    description: string;
-  }>({
+  const [categories, setCategories] = useState(['parches', 'camisetas', 'llaveros']);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [newProduct, setNewProduct] = useState({
     name: '',
-    category: 'parches',
+    category: 'parches' as string,
     price: '',
     stock: '',
     image_url: '',
     description: ''
   });
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const { addProduct } = useProducts();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  if (!isAdmin) return null;
 
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-  let imageUrl: string = newProduct.image_url;
+    let imageUrl: string = newProduct.image_url;
     if (imageFile) {
       // @ts-ignore
       const { supabase } = await import('@/lib/supabase');
@@ -82,7 +46,7 @@ const AdminPanel: React.FC = () => {
     }
     const productData = {
       name: newProduct.name.trim(),
-      category: newProduct.category,
+      category: newProduct.category as string,
       price: Number(newProduct.price),
       stock: Number(newProduct.stock),
       image_url: imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
@@ -108,9 +72,6 @@ const AdminPanel: React.FC = () => {
     });
     setShowAddProduct(false);
   };
-
-  if (loadingAdmin) return null;
-  if (!isAdmin) return null;
   return (
     <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
       <div className="flex items-center justify-between mb-4">
@@ -139,15 +100,54 @@ const AdminPanel: React.FC = () => {
               onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
               className="input-field"
             />
-            <select
-              value={newProduct.category}
-              onChange={(e) => setNewProduct({...newProduct, category: e.target.value as 'parches' | 'camisetas' | 'llaveros'})}
-              className="input-field"
-            >
-              <option value="parches">Parches</option>
-              <option value="camisetas">Camisetas</option>
-              <option value="llaveros">Llaveros</option>
-            </select>
+            {!addingCategory ? (
+              <select
+                value={newProduct.category}
+                onChange={e => {
+                  if (e.target.value === '__add_new__') {
+                    setAddingCategory(true);
+                  } else {
+                    setNewProduct({...newProduct, category: e.target.value});
+                  }
+                }}
+                className="input-field"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                ))}
+                <option value="__add_new__">+ Crear nueva categoría</option>
+              </select>
+            ) : (
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  placeholder="Nueva categoría"
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                  className="input-field"
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    if (newCategory.trim()) {
+                      setCategories([...categories, newCategory.trim()]);
+                      setNewProduct({...newProduct, category: newCategory.trim()});
+                      setNewCategory('');
+                      setAddingCategory(false);
+                    }
+                  }}
+                >Añadir</button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setNewCategory('');
+                    setAddingCategory(false);
+                  }}
+                >Cancelar</button>
+              </div>
+            )}
             <input
               type="number"
               placeholder="Precio (€)"
@@ -206,6 +206,7 @@ const AdminPanel: React.FC = () => {
       )}
     </div>
   );
+  }
 
-export default AdminPanel;
+  export default AdminPanel;
 

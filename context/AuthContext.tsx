@@ -13,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   lastActivity: number;
+  user: { email: string; uuid: string } | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateActivity: () => void;
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     lastActivity: Date.now()
   });
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [user, setUser] = useState<{ email: string; uuid: string } | null>(null);
 
   // Login usando Supabase y la tabla admins
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -38,6 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data?.user) {
         setAuthState((prev) => ({ ...prev, isLoading: false }));
+        setUser(null);
         return false;
       }
       // Guardar UUID en admins si no existe
@@ -55,9 +58,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading: false,
         lastActivity: Date.now()
       });
+      setUser({ email, uuid });
       return true;
     } catch (err) {
       setAuthState((prev) => ({ ...prev, isLoading: false }));
+      setUser(null);
       return false;
     }
   }, []);
@@ -73,6 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isLoading: false,
       lastActivity: Date.now()
     });
+    setUser(null);
   }, [sessionToken]);
 
   // Función para actualizar la actividad
@@ -126,6 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated: authState.isAuthenticated,
     isLoading: authState.isLoading,
     lastActivity: authState.lastActivity,
+    user,
     login,
     logout,
     updateActivity
