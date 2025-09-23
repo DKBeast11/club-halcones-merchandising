@@ -3,117 +3,212 @@ import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
 
+// Tipos locales para mejor tipo de dato
+interface NewProduct {
+  name: string;
+  category: string;
+  price: string;
+  stock: string;
+  image_url: string;
+  description: string;
+}
+
+const INITIAL_CATEGORIES = ['parches', 'camisetas', 'llaveros'];
+
+const INITIAL_PRODUCT_STATE: NewProduct = {
+  name: '',
+  category: 'parches',
+  price: '',
+  stock: '',
+  image_url: '',
+  description: ''
+};
+
 const AdminPanel: React.FC = () => {
   const { isAdmin, addProduct } = useProducts();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [categories, setCategories] = useState(['parches', 'camisetas', 'llaveros']);
+  // Estado para categorías
+  const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    category: 'parches' as string,
-    price: '',
-    stock: '',
-    image_url: '',
-    description: ''
-  });
+
+  // Estado del producto
+  const [newProduct, setNewProduct] = useState<NewProduct>(INITIAL_PRODUCT_STATE);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  // Si no es admin, no mostrar nada
   if (!isAdmin) return null;
 
-  async function handleAddProduct(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    let imageUrl: string = newProduct.image_url;
-    if (imageFile) {
-      // @ts-ignore
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
       const { supabase } = await import('@/lib/supabase');
-      const fileExt = imageFile.name.split('.').pop();
+      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
+      
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(fileName, imageFile);
-      if (error) {
-        setFormError('Error al subir la imagen');
-        return;
-      }
+        .upload(fileName, file);
+      
+      if (error) throw error;
+
       const { data: publicData } = await supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
-      imageUrl = publicData?.publicUrl || imageUrl;
+      
+      return publicData?.publicUrl || null;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw new Error('Error al subir la imagen');
     }
-    const productData = {
-      name: newProduct.name.trim(),
-      category: newProduct.category as string,
-      price: Number(newProduct.price),
-      stock: Number(newProduct.stock),
-      image_url: imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-      description: newProduct.description?.trim()
-    };
+  };
+
+  const validateForm = (): boolean => {
+    if (!newProduct.name.trim()) {
+      setFormError('El nombre del producto es obligatorio');
+      return false;
+    }
+    if (!newProduct.category) {
+      setFormError('La categoría es obligatoria');
+      return false;
+    }
+    if (!newProduct.price || Number(newProduct.price) <= 0) {
+      setFormError('El precio debe ser mayor a 0');
+      return false;
+    }
+    if (!newProduct.stock || Number(newProduct.stock) < 0) {
+      setFormError('El stock no puede ser negativo');
+      return false;
+    }
+    return true;
+  };
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    
     try {
+      let imageUrl = newProduct.image_url;
+      
+      // Subir imagen si se seleccionó un archivo
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        imageUrl = uploadedUrl || imageUrl;
+      }
+      
+      // Preparar datos del producto con tipos correctos
+      const productData = {
+        name: newProduct.name.trim(),
+        category: newProduct.category as "parches" | "camisetas" | "llaveros",
+        price: Number(newProduct.price),
+        stock: Number(newProduct.stock),
+        image_url: imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+        description: newProduct.description.trim()
+      };
+      
       await addProduct(productData);
-      setImageFile(null);
       resetForm();
+      
     } catch (err: any) {
       setFormError(err?.message || 'Error al guardar el producto. Revisa los datos e inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const resetForm = () => {
-    setNewProduct({
-      name: '',
-      category: 'parches',
-      price: '',
-      stock: '',
-      image_url: '',
-      description: ''
-    });
+    setNewProduct(INITIAL_PRODUCT_STATE);
+    setImageFile(null);
     setShowAddProduct(false);
+    setFormError(null);
+    setAddingCategory(false);
+    setNewCategory('');
   };
+
+  const handleAddCategory = () => {
+    const trimmedCategory = newCategory.trim().toLowerCase();
+    
+    if (!trimmedCategory) return;
+    
+    if (categories.includes(trimmedCategory)) {
+      setFormError('Esta categoría ya existe');
+      return;
+    }
+    
+    setCategories(prev => [...prev, trimmedCategory]);
+    setNewProduct(prev => ({ ...prev, category: trimmedCategory }));
+    setNewCategory('');
+    setAddingCategory(false);
+    setFormError(null);
+  };
+
+  const handleCancelCategory = () => {
+    setNewCategory('');
+    setAddingCategory(false);
+  };
+
+  const handleCategorySelect = (value: string) => {
+    if (value === '__add_new__') {
+      setAddingCategory(true);
+    } else {
+      setNewProduct(prev => ({ ...prev, category: value }));
+    }
+  };
+
   return (
     <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-red-400">Panel de Administración</h2>
         <button
           type="button"
-          aria-label={showAddProduct ? 'Cerrar formulario de producto' : 'Abrir formulario de producto'}
           onClick={() => setShowAddProduct(!showAddProduct)}
           className="btn-success flex items-center space-x-2"
+          disabled={isSubmitting}
         >
           <Plus className="w-4 h-4" />
-          <span>Añadir Producto</span>
+          <span>{showAddProduct ? 'Cerrar' : 'Añadir Producto'}</span>
         </button>
       </div>
 
       {showAddProduct && (
         <form className="bg-gray-700 p-4 rounded-lg space-y-4" onSubmit={handleAddProduct}>
           {formError && (
-            <div className="text-red-500 font-semibold mb-2">{formError}</div>
+            <div className="text-red-500 font-semibold mb-2 p-2 bg-red-100 dark:bg-red-900 rounded">
+              {formError}
+            </div>
           )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Nombre del producto */}
             <input
               type="text"
-              placeholder="Nombre del producto"
+              placeholder="Nombre del producto *"
               value={newProduct.name}
-              onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+              onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
               className="input-field"
+              required
+              disabled={isSubmitting}
             />
+
+            {/* Selector de categoría */}
             {!addingCategory ? (
               <select
                 value={newProduct.category}
-                onChange={e => {
-                  if (e.target.value === '__add_new__') {
-                    setAddingCategory(true);
-                  } else {
-                    setNewProduct({...newProduct, category: e.target.value});
-                  }
-                }}
+                onChange={(e) => handleCategorySelect(e.target.value)}
                 className="input-field"
+                disabled={isSubmitting}
+                required
               >
                 {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </option>
                 ))}
                 <option value="__add_new__">+ Crear nueva categoría</option>
               </select>
@@ -123,81 +218,99 @@ const AdminPanel: React.FC = () => {
                   type="text"
                   placeholder="Nueva categoría"
                   value={newCategory}
-                  onChange={e => setNewCategory(e.target.value)}
-                  className="input-field"
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="input-field flex-1"
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    if (newCategory.trim()) {
-                      setCategories([...categories, newCategory.trim()]);
-                      setNewProduct({...newProduct, category: newCategory.trim()});
-                      setNewCategory('');
-                      setAddingCategory(false);
-                    }
-                  }}
-                >Añadir</button>
+                  className="btn-primary px-3 py-2"
+                  onClick={handleAddCategory}
+                  disabled={isSubmitting || !newCategory.trim()}
+                >
+                  ✓
+                </button>
                 <button
                   type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setNewCategory('');
-                    setAddingCategory(false);
-                  }}
-                >Cancelar</button>
+                  className="btn-secondary px-3 py-2"
+                  onClick={handleCancelCategory}
+                  disabled={isSubmitting}
+                >
+                  ✕
+                </button>
               </div>
             )}
+
+            {/* Precio */}
             <input
               type="number"
-              placeholder="Precio (€)"
+              placeholder="Precio (€) *"
               value={newProduct.price}
-              onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+              onChange={(e) => setNewProduct(prev => ({ ...prev, price: e.target.value }))}
               className="input-field"
               min="0"
               step="0.01"
+              required
+              disabled={isSubmitting}
             />
+
+            {/* Stock */}
             <input
               type="number"
-              placeholder="Stock inicial"
+              placeholder="Stock inicial *"
               value={newProduct.stock}
-              onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+              onChange={(e) => setNewProduct(prev => ({ ...prev, stock: e.target.value }))}
               className="input-field"
               min="0"
+              required
+              disabled={isSubmitting}
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* URL de imagen */}
             <input
               type="url"
               placeholder="URL de la imagen (opcional)"
               value={newProduct.image_url}
-              onChange={(e) => setNewProduct({...newProduct, image_url: e.target.value})}
+              onChange={(e) => setNewProduct(prev => ({ ...prev, image_url: e.target.value }))}
               className="input-field"
+              disabled={isSubmitting}
             />
+
+            {/* Archivo de imagen */}
             <input
               type="file"
               accept="image/*"
-              onChange={e => setImageFile(e.target.files?.[0] || null)}
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               className="input-field"
+              disabled={isSubmitting}
             />
           </div>
+
+          {/* Descripción */}
           <textarea
             placeholder="Descripción del producto"
             value={newProduct.description}
-            onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+            onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
             className="input-field h-20 resize-none"
+            disabled={isSubmitting}
           />
+
+          {/* Botones de acción */}
           <div className="flex space-x-3">
             <button
               type="submit"
               className="btn-primary"
+              disabled={isSubmitting}
             >
-              Añadir Producto
+              {isSubmitting ? 'Guardando...' : 'Añadir Producto'}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="btn-secondary"
+              disabled={isSubmitting}
             >
               Cancelar
             </button>
@@ -206,7 +319,6 @@ const AdminPanel: React.FC = () => {
       )}
     </div>
   );
-  }
+};
 
-  export default AdminPanel;
-
+export default AdminPanel;
