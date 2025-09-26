@@ -27,9 +27,14 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.production
 
 # vercel
 .vercel
+
+# archivos temporales de inserción
+insert_products*.js
+INSTRUCCIONES_INSERCION_PRODUCTOS.js
 
 # typescript
 *.tsbuildinfo
