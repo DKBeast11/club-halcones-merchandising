@@ -14,7 +14,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const stockInfo = getStockStatus(product.stock);
 
   return (
-    <article className="card flex flex-col justify-between" aria-label={`Producto: ${product.name}`}> 
+    <article
+      className={`card flex flex-col justify-between ${product.stock === 0 ? 'opacity-50 pointer-events-none select-none' : ''}`}
+      aria-label={`Producto: ${product.name}`}
+    >
       <div>
         <div className="aspect-square relative">
           <img

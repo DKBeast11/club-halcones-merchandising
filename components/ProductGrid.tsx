@@ -15,7 +15,14 @@ const ProductGrid: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  if (filteredProducts.length === 0) {
+  // Ordenar: productos con stock 0 al final, el resto por nombre (sort estable)
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (a.stock === 0 && b.stock > 0) return 1;
+    if (a.stock > 0 && b.stock === 0) return -1;
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+  });
+
+  if (sortedProducts.length === 0) {
     return (
       <section className="text-center py-12" aria-label="Sin productos">
         <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -28,7 +35,7 @@ const ProductGrid: React.FC = () => {
   return (
     <section aria-label="Listado de productos">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProducts.map(product => (
+        {sortedProducts.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
