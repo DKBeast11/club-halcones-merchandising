@@ -1,6 +1,8 @@
-# Club Halcones - Merchandising Oficial
+# Club Halcones - Merchandising Oficial 🛩️
 
 Una aplicación web moderna para la gestión de catálogo de merchandising del Club Halcones, especializada en productos de F-18 y Eurofighter.
+
+**🌐 Sitio web en vivo**: [Próximamente en Vercel]
 
 ## 🚀 Características
 
