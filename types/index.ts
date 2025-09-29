@@ -1,7 +1,7 @@
 export interface Product {
   id: string; // UUID en la base de datos
   name: string;
-  category: 'parches' | 'camisetas' | 'llaveros';
+  category: 'parches' | 'camisetas' | 'llaveros' | 'miscelanea';
   price: number;
   stock: number;
   image_url?: string;
@@ -24,7 +24,7 @@ export interface StockStatus {
 
 export interface NewProduct {
   name: string;
-  category: 'parches' | 'camisetas' | 'llaveros';
+  category: 'parches' | 'camisetas' | 'llaveros' | 'miscelanea';
   price: string;
   stock: string;
   image_url?: string;

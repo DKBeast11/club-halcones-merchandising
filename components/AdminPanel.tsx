@@ -13,7 +13,7 @@ interface NewProduct {
   description: string;
 }
 
-const INITIAL_CATEGORIES = ['parches', 'camisetas', 'llaveros'];
+const INITIAL_CATEGORIES = ['parches', 'camisetas', 'llaveros', 'miscelanea'];
 
 const INITIAL_PRODUCT_STATE: NewProduct = {
   name: '',

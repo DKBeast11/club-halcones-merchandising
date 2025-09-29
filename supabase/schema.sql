@@ -4,7 +4,7 @@
 CREATE TABLE products (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('parches', 'camisetas', 'llaveros')),
+  category VARCHAR(50) NOT NULL CHECK (category IN ('parches', 'camisetas', 'llaveros', 'miscelanea')),
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
   stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   image_url TEXT,

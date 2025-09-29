@@ -8,7 +8,8 @@ const categories = [
   { id: 'all', name: 'Todos los productos', icon: '🛍️' },
   { id: 'parches', name: 'Parches', icon: '🎖️' },
   { id: 'camisetas', name: 'Camisetas', icon: '👕' },
-  { id: 'llaveros', name: 'Llaveros', icon: '🔑' }
+  { id: 'llaveros', name: 'Llaveros', icon: '🔑' },
+  { id: 'miscelanea', name: 'Miscelanea', icon: '🎁' }
 ];
 
 const SearchAndFilters: React.FC = () => {
