@@ -83,9 +83,10 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Los productos ahora se cargan automáticamente desde Supabase
 
   const addProduct = async (productData: Omit<Product, 'id'>) => {
-    await addProductSupabase(productData);
+    const created = await addProductSupabase(productData);
     setNewProduct(initialNewProduct);
     setShowAddProduct(false);
+    return created;
   };
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {

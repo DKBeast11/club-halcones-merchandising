@@ -21,7 +21,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div>
         <div className="aspect-square relative">
           <img
-            src={product.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'}
+            src={
+              (product.images && product.images.length > 0 && product.images[0].image_url) 
+                || product.image_url 
+                || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'
+            }
             alt={product.name}
             className="w-full h-full object-cover"
           />

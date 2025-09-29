@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   stock: number;
   image_url?: string;
+  images?: ProductImage[];
   description?: string;
   created_at?: string; // ISO string
   updated_at?: string; // ISO string
@@ -31,6 +32,14 @@ export interface NewProduct {
   description?: string;
 }
 
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  position?: number;
+  created_at?: string;
+}
+
 export interface ProductContextType {
   products: Product[];
   isAdmin: boolean;
@@ -39,7 +48,7 @@ export interface ProductContextType {
   showAddProduct: boolean;
   editingProduct: Product | null;
   newProduct: NewProduct;
-  addProduct: (product: Omit<Product, 'id'>) => void;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   updateStock: (productId: string, newStock: number) => void;

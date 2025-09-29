@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
+import ImageManager from './ImageManager';
 
 // Tipos locales para mejor tipo de dato
 interface NewProduct {
@@ -25,7 +26,7 @@ const INITIAL_PRODUCT_STATE: NewProduct = {
 };
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin, addProduct } = useProducts();
+  const { isAdmin, addProduct, products } = useProducts();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,32 +39,13 @@ const AdminPanel: React.FC = () => {
   // Estado del producto
   const [newProduct, setNewProduct] = useState<NewProduct>(INITIAL_PRODUCT_STATE);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  // State for ImageManager (must be declared with other hooks)
+  const [managingProductId, setManagingProductId] = useState<string | null>(null);
 
   // Si no es admin, no mostrar nada
   if (!isAdmin) return null;
 
-  const uploadImage = async (file: File): Promise<string | null> => {
-    try {
-      const { supabase } = await import('@/lib/supabase');
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      
-      const { data, error } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-
-      const { data: publicData } = await supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-      
-      return publicData?.publicUrl || null;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw new Error('Error al subir la imagen');
-    }
-  };
+  // Image upload is now handled by ImageManager and server-side API routes.
 
   const validateForm = (): boolean => {
     if (!newProduct.name.trim()) {
@@ -94,25 +76,36 @@ const AdminPanel: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      let imageUrl = newProduct.image_url;
-      
-      // Subir imagen si se seleccionó un archivo
-      if (imageFile) {
-        const uploadedUrl = await uploadImage(imageFile);
-        imageUrl = uploadedUrl || imageUrl;
-      }
-      
       // Preparar datos del producto con tipos correctos
       const productData = {
         name: newProduct.name.trim(),
         category: newProduct.category as "parches" | "camisetas" | "llaveros",
         price: Number(newProduct.price),
         stock: Number(newProduct.stock),
-        image_url: imageUrl || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+        image_url: newProduct.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
         description: newProduct.description.trim()
       };
-      
-      await addProduct(productData);
+
+      // Primero, crear el producto para obtener su id
+      const created = await addProduct(productData);
+
+      // Si se seleccionó un archivo, subirlo mediante el endpoint server
+      if (imageFile) {
+        const form = new FormData();
+        form.append('file', imageFile);
+        form.append('productId', created.id);
+
+        const resp = await fetch('/api/admin/images', { method: 'POST', body: form });
+        if (!resp.ok) throw new Error('Error al subir la imagen');
+      } else if (newProduct.image_url) {
+        // Si se proporcionó solo una URL, insertar como image record
+        const form = new FormData();
+        form.append('imageUrl', newProduct.image_url);
+        form.append('productId', created.id);
+        const resp = await fetch('/api/admin/images', { method: 'POST', body: form });
+        if (!resp.ok) throw new Error('Error al crear registro de imagen');
+      }
+
       resetForm();
       
     } catch (err: any) {
@@ -316,6 +309,31 @@ const AdminPanel: React.FC = () => {
             </button>
           </div>
         </form>
+      )}
+
+      {/* Product list with Manage Images */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold text-white mb-2">Productos</h3>
+        <div className="grid gap-2">
+          {/** Render a simplified list; use products from context */}
+          {/** eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
+          {products.map(p => (
+            <div key={p.id} className="flex items-center justify-between bg-gray-700 p-2 rounded">
+              <div className="text-sm text-white">{p.name}</div>
+              <div className="flex gap-2">
+                <button className="btn-secondary text-xs" onClick={() => setManagingProductId(p.id)}>
+                  Gestionar imágenes
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {managingProductId && (
+        <div className="mt-4">
+          <ImageManager productId={managingProductId} onClose={() => setManagingProductId(null)} />
+        </div>
       )}
     </div>
   );

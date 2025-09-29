@@ -53,6 +53,46 @@ CREATE INDEX idx_products_stock ON products(stock);
 CREATE INDEX idx_admin_sessions_token ON admin_sessions(session_token);
 CREATE INDEX idx_admin_sessions_expires ON admin_sessions(expires_at);
 
+-- Nueva tabla para almacenar múltiples imágenes por producto
+CREATE TABLE product_images (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índice para consultas rápidas por product_id y orden por posición
+CREATE INDEX idx_product_images_product_id ON product_images(product_id);
+CREATE INDEX idx_product_images_product_id_position ON product_images(product_id, position);
+
+-- Política: permitir lectura pública de imágenes asociadas a productos
+ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
+-- Crear policy de lectura pública de forma idempotente y segura
+DO $$
+BEGIN
+  -- Solo intentar crear la policy si la tabla product_images existe
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'product_images') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies WHERE policyname IN (
+        'product_images_viewable_by_everyone',
+        'Product images are viewable by everyone'
+      )
+    ) THEN
+      CREATE POLICY product_images_viewable_by_everyone ON product_images
+        FOR SELECT USING (true);
+    END IF;
+  END IF;
+END$$;
+
+-- Insertar imágenes de ejemplo vinculadas a los productos insertados arriba
+-- Nota: para los UUIDs de ejemplo, asumimos que los productos anteriores tienen ids generados; en un entorno real deberías usar los ids reales.
+INSERT INTO product_images (product_id, image_url, position) VALUES
+((SELECT id FROM products WHERE name = 'Parche F-18 Super Hornet' LIMIT 1), 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop', 0),
+((SELECT id FROM products WHERE name = 'Camiseta Eurofighter Typhoon' LIMIT 1), 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&fit=crop', 0),
+((SELECT id FROM products WHERE name = 'Llavero F-18 Metálico' LIMIT 1), 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=800&fit=crop', 0),
+((SELECT id FROM products WHERE name = 'Parche Escuadrón Ala 15' LIMIT 1), 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop', 0);
+
 -- Políticas de seguridad (RLS)
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;

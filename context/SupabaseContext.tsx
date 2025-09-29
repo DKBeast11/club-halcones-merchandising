@@ -8,7 +8,7 @@ interface SupabaseContextType {
   products: Product[];
   isLoading: boolean;
   error: string | null;
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateStock: (productId: string, newStock: number) => Promise<void>;
@@ -30,7 +30,8 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        // Traer también las imágenes relacionadas de product_images
+        .select('*, product_images(id, image_url, position, created_at)')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -42,9 +43,18 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         id: item.id,
         name: item.name,
         category: item.category,
-        price: parseFloat(item.price),
+        // price puede venir como string o número
+        price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
         stock: item.stock,
         image_url: item.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+        // Mapear las imágenes relacionadas si existen
+        images: item.product_images ? item.product_images.map((img: any) => ({
+          id: img.id,
+          product_id: item.id,
+          image_url: img.image_url,
+          position: img.position,
+          created_at: img.created_at
+        })) : undefined,
         description: item.description || '',
         created_at: item.created_at,
         updated_at: item.updated_at
@@ -61,7 +71,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   // Añadir producto
-  const addProduct = async (productData: Omit<Product, 'id'>) => {
+  const addProduct = async (productData: Omit<Product, 'id'>): Promise<Product> => {
     setError(null);
     const { data, error } = await supabase
       .from('products')
@@ -83,6 +93,8 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Recargar productos
     await loadProducts();
+
+    return data as Product;
   };
 
   // Actualizar producto
