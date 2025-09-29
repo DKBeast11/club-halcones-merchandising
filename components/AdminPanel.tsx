@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
-import ImageManager from './ImageManager';
 
 // Tipos locales para mejor tipo de dato
 interface NewProduct {
@@ -39,8 +38,6 @@ const AdminPanel: React.FC = () => {
   // Estado del producto
   const [newProduct, setNewProduct] = useState<NewProduct>(INITIAL_PRODUCT_STATE);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  // State for ImageManager (must be declared with other hooks)
-  const [managingProductId, setManagingProductId] = useState<string | null>(null);
 
   // Si no es admin, no mostrar nada
   if (!isAdmin) return null;
@@ -309,31 +306,6 @@ const AdminPanel: React.FC = () => {
             </button>
           </div>
         </form>
-      )}
-
-      {/* Product list with Manage Images */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold text-white mb-2">Productos</h3>
-        <div className="grid gap-2">
-          {/** Render a simplified list; use products from context */}
-          {/** eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
-          {products.map(p => (
-            <div key={p.id} className="flex items-center justify-between bg-gray-700 p-2 rounded">
-              <div className="text-sm text-white">{p.name}</div>
-              <div className="flex gap-2">
-                <button className="btn-secondary text-xs" onClick={() => setManagingProductId(p.id)}>
-                  Gestionar imágenes
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {managingProductId && (
-        <div className="mt-4">
-          <ImageManager productId={managingProductId} onClose={() => setManagingProductId(null)} />
-        </div>
       )}
     </div>
   );

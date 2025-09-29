@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Package, Plus, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Package, Trash2, Image } from 'lucide-react';
 import { Product } from '@/types';
 import { useProducts } from '@/context/ProductContext';
+import ImageManager from './ImageManager';
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +12,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isAdmin, updateStock, deleteProduct, getStockStatus } = useProducts();
+  const [managingImages, setManagingImages] = useState(false);
   const stockInfo = getStockStatus(product.stock);
 
   return (
@@ -64,6 +66,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <div className="flex items-center space-x-2">
                 <button
                   type="button"
+                  aria-label="Restar 10 unidades de stock"
+                  onClick={() => updateStock(product.id, Math.max(0, product.stock - 10))}
+                  className="bg-red-700 hover:bg-red-800 text-white px-2 py-1 rounded text-sm transition-colors"
+                  disabled={product.stock <= 0}
+                >
+                  -10
+                </button>
+                <button
+                  type="button"
                   aria-label="Restar 1 unidad de stock"
                   onClick={() => updateStock(product.id, product.stock - 1)}
                   className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm transition-colors"
@@ -80,14 +91,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 >
                   +1
                 </button>
+                <button
+                  type="button"
+                  aria-label="Sumar 10 unidades de stock"
+                  onClick={() => updateStock(product.id, product.stock + 10)}
+                  className="bg-green-700 hover:bg-green-800 text-white px-2 py-1 rounded text-sm transition-colors"
+                >
+                  +10
+                </button>
               </div>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => updateStock(product.id, product.stock + 10)}
+                  onClick={() => setManagingImages(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs flex items-center space-x-1 transition-colors"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>+10</span>
+                  <Image className="w-3 h-3" />
+                  <span>Gestionar Imágenes</span>
                 </button>
                 <button
                   onClick={() => deleteProduct(product.id)}
@@ -101,6 +120,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
       </div>
+      
+      {/* Modal de gestión de imágenes */}
+      {managingImages && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-white">Gestionar Imágenes - {product.name}</h2>
+              <button
+                onClick={() => setManagingImages(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <ImageManager productId={product.id} onClose={() => setManagingImages(false)} />
+          </div>
+        </div>
+      )}
     </article>
   );
 };
