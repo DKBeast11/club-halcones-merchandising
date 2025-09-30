@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Package, Trash2, Image } from 'lucide-react';
 import { Product } from '@/types';
 import { useProducts } from '@/context/ProductContext';
@@ -13,6 +13,9 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isAdmin, updateStock, deleteProduct, getStockStatus } = useProducts();
   const [managingImages, setManagingImages] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
   const stockInfo = getStockStatus(product.stock);
 
   return (
@@ -21,16 +24,88 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       aria-label={`Producto: ${product.name}`}
     >
       <div>
-        <div className="aspect-square relative">
-          <img
-            src={
-              (product.images && product.images.length > 0 && product.images[0].image_url) 
-                || product.image_url 
-                || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'
+        <div
+          className="aspect-square relative overflow-hidden"
+          onKeyDown={(e) => {
+            if (product.images && product.images.length > 1) {
+              if (e.key === 'ArrowRight') setCurrentIndex((i) => (i + 1) % product.images!.length);
+              if (e.key === 'ArrowLeft') setCurrentIndex((i) => (i - 1 + product.images!.length) % product.images!.length);
             }
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
+          }}
+          tabIndex={0}
+          onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+          onTouchMove={(e) => { touchEndX.current = e.touches[0].clientX; }}
+          onTouchEnd={() => {
+            if (touchStartX.current !== null && touchEndX.current !== null) {
+              const dx = touchStartX.current - touchEndX.current;
+              const threshold = 50; // px
+              if (dx > threshold && product.images && product.images.length > 1) {
+                // swipe left -> next
+                setCurrentIndex((i) => (i + 1) % product.images!.length);
+              } else if (dx < -threshold && product.images && product.images.length > 1) {
+                // swipe right -> prev
+                setCurrentIndex((i) => (i - 1 + product.images!.length) % product.images!.length);
+              }
+            }
+            touchStartX.current = null;
+            touchEndX.current = null;
+          }}
+        >
+          {product.images && product.images.length > 1 ? (
+            // Carousel view
+            <>
+              {product.images.map((img, idx) => (
+                <img
+                  key={img.id}
+                  src={img.image_url}
+                  alt={`${product.name} - ${idx + 1}`}
+                  className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-300 ${idx === currentIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                />
+              ))}
+
+              {/* Prev / Next buttons */}
+              <button
+                type="button"
+                aria-label="Anterior"
+                onClick={() => setCurrentIndex((i) => (i - 1 + product.images!.length) % product.images!.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="Siguiente"
+                onClick={() => setCurrentIndex((i) => (i + 1) % product.images!.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full"
+              >
+                ›
+              </button>
+
+              {/* Indicators */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2">
+                {product.images.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    aria-label={`Ir a la imagen ${idx + 1}`}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`w-2 h-2 rounded-full ${idx === currentIndex ? 'bg-white' : 'bg-gray-400'}`}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            // Single image fallback
+            <img
+              src={
+                (product.images && product.images.length > 0 && product.images[0].image_url) 
+                  || product.image_url 
+                  || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'
+              }
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
         <div className="p-4">
           <h3 className="font-bold text-lg mb-2 text-white">{product.name}</h3>
