@@ -2,7 +2,16 @@
 
 Una aplicación web moderna para la gestión de catálogo de merchandising del Club Halcones, especializada en productos de F-18 y Eurofighter.
 
-**🌐 Sitio web en vivo**: [Próximamente en Vercel]
+> ⚠️ **Este README está desactualizado.** Describe una versión anterior que
+> guardaba los datos en `localStorage` y usaba una contraseña de administrador
+> en el propio código. Nada de eso es cierto desde que se migró a Supabase
+> (base de datos, autenticación y almacenamiento de imágenes).
+>
+> Para el estado real del proyecto, lo que está hecho, lo que queda y las
+> trampas conocidas, ver:
+> **[`.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md`](.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md)**
+>
+> Reescribir este archivo es parte de la Fase 4, todavía pendiente.
 
 ## 🚀 Características
 
