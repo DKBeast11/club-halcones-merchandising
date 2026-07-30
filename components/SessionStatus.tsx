@@ -1,105 +1,97 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Clock, LogOut, AlertTriangle, Minimize2, Maximize2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const AUTO_LOGOUT_MINUTES = parseInt(process.env.NEXT_PUBLIC_AUTO_LOGOUT_MINUTES || '10');
 
+/** Por debajo de esto el testigo pasa a ámbar. */
+const WARNING_MINUTES = 2;
+
 const SessionStatus: React.FC = () => {
   const { isAuthenticated, logout, lastActivity } = useAuth();
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [showWarning, setShowWarning] = useState(false);
+  const [minutesLeft, setMinutesLeft] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const updateTimeLeft = () => {
-      const now = Date.now();
-      const timeDiff = now - lastActivity;
-      const maxTime = AUTO_LOGOUT_MINUTES * 60 * 1000;
-      const remaining = Math.max(0, maxTime - timeDiff);
-      const remainingMinutes = remaining / (60 * 1000);
-      
-      setTimeLeft(remainingMinutes);
-      setShowWarning(remainingMinutes <= 2);
+    const tick = () => {
+      const elapsed = Date.now() - lastActivity;
+      const remaining = Math.max(0, AUTO_LOGOUT_MINUTES * 60 * 1000 - elapsed);
+      setMinutesLeft(remaining / 60000);
     };
 
-    updateTimeLeft();
-    const interval = setInterval(updateTimeLeft, 1000); // Actualizar cada segundo
-
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [isAuthenticated, lastActivity]);
 
   if (!isAuthenticated) return null;
 
-  const formatTime = (minutes: number) => {
-    if (minutes <= 0) return '0:00';
-    const mins = Math.floor(minutes);
-    const secs = Math.floor((minutes - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const warning = minutesLeft <= WARNING_MINUTES;
 
-  const handleLogout = () => {
-    logout();
-  };
-
-  const toggleMinimize = () => {
-    setIsMinimized(!isMinimized);
-  };
+  const mins = Math.floor(minutesLeft);
+  const secs = Math.floor((minutesLeft - mins) * 60);
+  const formatted = `${mins}:${secs.toString().padStart(2, '0')}`;
 
   return (
-    <aside className={`fixed top-4 left-4 z-40 transition-all duration-300 ${
-      showWarning ? 'animate-pulse' : ''
-    }`} aria-live="polite" aria-label="Estado de sesión">
-      <div className={`bg-gray-800 border rounded-lg shadow-lg transition-all duration-300 ${
-        showWarning 
-          ? 'border-red-500 bg-red-900/20' 
-          : 'border-gray-700'
-      } ${isMinimized ? 'p-2' : 'p-3'}`}>
-        <div className="flex items-center space-x-2">
-          {showWarning ? (
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-          ) : (
-            <Clock className="w-4 h-4 text-blue-400" />
-          )}
-          
-          {!isMinimized && (
-            <div className="text-sm">
-              <div className={`font-semibold ${
-                showWarning ? 'text-red-400' : 'text-green-400'
-              }`}>
-                SESIÓN ACTIVA
-              </div>
-              <div className={`text-xs ${
-                showWarning ? 'text-red-300' : 'text-gray-300'
-              }`}>
-                {showWarning ? 'Expira en' : 'Expira en'} {formatTime(timeLeft)}
-              </div>
-            </div>
-          )}
-          
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={toggleMinimize}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
-              title={isMinimized ? "Expandir" : "Minimizar"}
+    <aside
+      className="fixed left-4 top-4 z-40"
+      aria-live="polite"
+      aria-label="Estado de la sesión"
+    >
+      <div
+        className={`engraved flex items-center gap-3 px-3 py-2 ${
+          warning ? 'border-signal-amber/60' : ''
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+            warning
+              ? 'bg-signal-amber shadow-[0_0_7px_#E8A33D]'
+              : 'bg-signal-green shadow-[0_0_7px_#7FB069]'
+          }`}
+        />
+
+        {!isMinimized && (
+          <div className="flex flex-col gap-0.5">
+            <span
+              className={`legend-text text-[11px] leading-none ${
+                warning ? 'text-signal-amber' : 'text-signal-green'
+              }`}
             >
-              {isMinimized ? (
-                <Maximize2 className="w-3 h-3 text-gray-400 hover:text-white" />
-              ) : (
-                <Minimize2 className="w-3 h-3 text-gray-400 hover:text-white" />
-              )}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-4 h-4 text-gray-400 hover:text-white" />
-            </button>
+              Sesión activa
+            </span>
+            <span className="font-data text-[10px] tabular text-legend-dim">
+              Expira en {formatted}
+            </span>
           </div>
+        )}
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setIsMinimized((v) => !v)}
+            aria-label={isMinimized ? 'Mostrar detalles de la sesión' : 'Minimizar'}
+            className="p-1 text-legend-dim transition-colors hover:text-legend"
+          >
+            {isMinimized ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronUp className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Cerrar sesión"
+            className="p-1 text-legend-dim transition-colors hover:text-signal-red"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </aside>

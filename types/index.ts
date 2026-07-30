@@ -42,6 +42,8 @@ export interface ProductImage {
 
 export interface ProductContextType {
   products: Product[];
+  isLoading: boolean;
+  error: string | null;
   isAdmin: boolean;
   searchTerm: string;
   selectedCategory: string;

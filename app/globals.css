@@ -3,38 +3,147 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-family: system-ui, sans-serif;
-  }
-  
   body {
-    @apply bg-gray-900 text-white;
+    @apply min-h-screen bg-panel text-legend;
+  }
+
+  /* Foco visible y consistente en todo el panel. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-signal-amber ring-offset-2 ring-offset-panel;
+  }
+
+  /* Las cifras se leen en columna: siempre tabulares. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
+  /* ---------- superficies ---------- */
+
+  /* Placa en relieve: el canto claro arriba simula el bisel. */
+  .surface {
+    @apply bg-panel-raised border border-panel-edge;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+
+  /* Hueco grabado: donde va lo que se lee, no lo que se toca. */
+  .engraved {
+    @apply bg-panel-engrave border border-panel-edge;
+  }
+
+  /* ---------- rotulación ---------- */
+
+  .legend-text {
+    @apply font-legend uppercase tracking-legend;
+  }
+
+  /* ---------- controles ---------- */
+
+  .btn {
+    @apply font-legend uppercase tracking-legend text-[13px] px-4 py-2.5
+           border transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors;
+    @apply btn bg-panel-engrave border-signal-amber text-signal-amber
+           hover:bg-signal-amber hover:text-panel;
   }
-  
+
   .btn-secondary {
-    @apply bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-semibold transition-colors;
+    @apply btn bg-panel-engrave border-panel-edge text-legend-dim
+           hover:text-legend hover:border-legend-dim;
   }
-  
+
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors;
+    @apply btn bg-panel-engrave border-signal-red/60 text-signal-red
+           hover:bg-signal-red hover:text-panel hover:border-signal-red;
   }
-  
+
   .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors;
+    @apply btn bg-panel-engrave border-signal-green/60 text-signal-green
+           hover:bg-signal-green hover:text-panel hover:border-signal-green;
   }
-  
+
+  /* Botón de filtro: placa apagada que se enciende al seleccionarse. */
+  .legend-btn {
+    @apply font-legend uppercase tracking-legend text-[12.5px] px-4 py-2
+           bg-panel-engrave border border-panel-edge text-legend-dim
+           transition-colors hover:text-legend;
+  }
+
+  .legend-btn[aria-pressed='true'] {
+    @apply bg-panel-raised border-signal-amber text-signal-amber hover:text-signal-amber;
+    box-shadow: inset 0 0 12px rgb(232 163 61 / 0.16);
+  }
+
   .input-field {
-    @apply w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400;
+    @apply w-full px-3 py-2.5 bg-panel-engrave border border-panel-edge
+           text-legend placeholder-legend-dim/70
+           focus:border-signal-amber transition-colors
+           disabled:opacity-40 disabled:cursor-not-allowed;
   }
-  
+
+  /* ---------- tarjeta ---------- */
+
   .card {
-    @apply bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 hover:border-blue-500 transition-all duration-300;
+    @apply surface flex flex-col;
+  }
+
+  /* ---------- testigo de disponibilidad ---------- */
+
+  /* Placa grabada que se ilumina según el stock. Es el elemento firma:
+     en un barrido de la rejilla se ve qué queda sin leer una sola cifra. */
+  .ann {
+    @apply relative overflow-hidden flex items-center justify-between gap-3
+           px-3 py-2.5 border rounded-sm;
+  }
+
+  .ann-legend {
+    @apply font-legend uppercase tracking-legend text-[13px] leading-none;
+  }
+
+  .ann-count {
+    @apply font-data text-[11px] text-legend-dim tracking-wide tabular;
+  }
+
+  .ann-ok {
+    @apply border-signal-green/50;
+    background-color: #1f2a1d;
+    box-shadow: inset 0 0 16px rgb(127 176 105 / 0.2);
+  }
+  .ann-ok .ann-legend {
+    @apply text-signal-green;
+    text-shadow: 0 0 9px rgb(127 176 105 / 0.55);
+  }
+
+  .ann-warn {
+    @apply border-signal-amber/55;
+    background-color: #2e2312;
+    box-shadow: inset 0 0 16px rgb(232 163 61 / 0.22);
+  }
+  .ann-warn .ann-legend {
+    @apply text-signal-amber;
+    text-shadow: 0 0 9px rgb(232 163 61 / 0.6);
+  }
+
+  /* Agotado: la lámpara sencillamente no se enciende. */
+  .ann-dark {
+    @apply border-signal-red/30;
+    background-color: #171917;
+  }
+  .ann-dark .ann-legend {
+    color: #6a4a47;
+  }
+
+  /* Capa del chequeo de testigos al cargar la página. */
+  .lamp-test {
+    @apply absolute inset-0 bg-signal-amber opacity-0 pointer-events-none animate-bist;
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .lamp-test {
+    animation: none;
+  }
+}

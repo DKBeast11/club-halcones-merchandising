@@ -12,17 +12,19 @@ const MerchandiseCatalog: React.FC = () => {
   const { isAdmin } = useProducts();
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white" aria-label="Catálogo de productos Club Halcones">
+    <>
       <Header />
       <SessionStatus />
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <main
+        className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6"
+        aria-label="Catálogo de merchandising"
+      >
         <SearchAndFilters />
         {isAdmin && <AdminPanel />}
         <ProductGrid />
-      </div>
-    </main>
+      </main>
+    </>
   );
 };
 
 export default MerchandiseCatalog;
-

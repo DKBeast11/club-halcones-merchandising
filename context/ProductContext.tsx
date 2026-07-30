@@ -127,6 +127,8 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const value: ProductContextType = {
     products,
+    isLoading,
+    error,
     isAdmin: isAuthenticated && !!user,
     searchTerm,
     selectedCategory,

@@ -1,10 +1,12 @@
 'use client';
-import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useProducts } from '@/context/ProductContext';
 
-// Tipos locales para mejor tipo de dato
-interface NewProduct {
+import React, { useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import { useProducts } from '@/context/ProductContext';
+import { Product } from '@/types';
+import { adminFetch } from '@/lib/adminFetch';
+
+interface NewProductForm {
   name: string;
   category: string;
   price: string;
@@ -15,286 +17,299 @@ interface NewProduct {
 
 const INITIAL_CATEGORIES = ['parches', 'camisetas', 'llaveros', 'miscelanea'];
 
-const INITIAL_PRODUCT_STATE: NewProduct = {
+const EMPTY_FORM: NewProductForm = {
   name: '',
   category: 'parches',
   price: '',
   stock: '',
   image_url: '',
-  description: ''
+  description: '',
 };
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin, addProduct, products } = useProducts();
-  const [showAddProduct, setShowAddProduct] = useState(false);
+  const { isAdmin, addProduct } = useProducts();
+
+  const [isOpen, setIsOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estado para categorías
   const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
-  // Estado del producto
-  const [newProduct, setNewProduct] = useState<NewProduct>(INITIAL_PRODUCT_STATE);
+  const [form, setForm] = useState<NewProductForm>(EMPTY_FORM);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Si no es admin, no mostrar nada
   if (!isAdmin) return null;
 
-  // Image upload is now handled by ImageManager and server-side API routes.
+  const set = <K extends keyof NewProductForm>(key: K, value: NewProductForm[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const validateForm = (): boolean => {
-    if (!newProduct.name.trim()) {
-      setFormError('El nombre del producto es obligatorio');
+  const validate = (): boolean => {
+    if (!form.name.trim()) {
+      setFormError('El nombre del producto es obligatorio.');
       return false;
     }
-    if (!newProduct.category) {
-      setFormError('La categoría es obligatoria');
+    if (!form.category) {
+      setFormError('La categoría es obligatoria.');
       return false;
     }
-    if (!newProduct.price || Number(newProduct.price) <= 0) {
-      setFormError('El precio debe ser mayor a 0');
+    if (!form.price || Number(form.price) <= 0) {
+      setFormError('El precio tiene que ser mayor que 0.');
       return false;
     }
-    if (!newProduct.stock || Number(newProduct.stock) < 0) {
-      setFormError('El stock no puede ser negativo');
+    if (form.stock === '' || Number(form.stock) < 0) {
+      setFormError('El stock no puede ser negativo.');
       return false;
     }
     return true;
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setImageFile(null);
+    setIsOpen(false);
+    setFormError(null);
+    setAddingCategory(false);
+    setNewCategory('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
-    if (!validateForm()) return;
-    
+
+    if (!validate()) return;
+
     setIsSubmitting(true);
-    
+
     try {
-      // Preparar datos del producto con tipos correctos
-      const productData = {
-        name: newProduct.name.trim(),
-        category: newProduct.category as "parches" | "camisetas" | "llaveros",
-        price: Number(newProduct.price),
-        stock: Number(newProduct.stock),
-        image_url: newProduct.image_url || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-        description: newProduct.description.trim()
-      };
+      const created = await addProduct({
+        name: form.name.trim(),
+        category: form.category as Product['category'],
+        price: Number(form.price),
+        stock: Number(form.stock),
+        image_url: form.image_url || undefined,
+        description: form.description.trim(),
+      });
 
-      // Primero, crear el producto para obtener su id
-      const created = await addProduct(productData);
+      // La imagen se registra aparte: o el archivo subido, o la URL indicada.
+      if (imageFile || form.image_url) {
+        const body = new FormData();
+        body.append('productId', created.id);
+        if (imageFile) body.append('file', imageFile);
+        else body.append('imageUrl', form.image_url);
 
-      // Si se seleccionó un archivo, subirlo mediante el endpoint server
-      if (imageFile) {
-        const form = new FormData();
-        form.append('file', imageFile);
-        form.append('productId', created.id);
-
-        const resp = await fetch('/api/admin/images', { method: 'POST', body: form });
-        if (!resp.ok) throw new Error('Error al subir la imagen');
-      } else if (newProduct.image_url) {
-        // Si se proporcionó solo una URL, insertar como image record
-        const form = new FormData();
-        form.append('imageUrl', newProduct.image_url);
-        form.append('productId', created.id);
-        const resp = await fetch('/api/admin/images', { method: 'POST', body: form });
-        if (!resp.ok) throw new Error('Error al crear registro de imagen');
+        const res = await adminFetch('/api/admin/images', { method: 'POST', body });
+        if (!res.ok) throw new Error('El producto se ha creado, pero la imagen ha fallado.');
       }
 
       resetForm();
-      
-    } catch (err: any) {
-      setFormError(err?.message || 'Error al guardar el producto. Revisa los datos e inténtalo de nuevo.');
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : 'No se ha podido guardar el producto.'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setNewProduct(INITIAL_PRODUCT_STATE);
-    setImageFile(null);
-    setShowAddProduct(false);
-    setFormError(null);
-    setAddingCategory(false);
-    setNewCategory('');
-  };
-
   const handleAddCategory = () => {
-    const trimmedCategory = newCategory.trim().toLowerCase();
-    
-    if (!trimmedCategory) return;
-    
-    if (categories.includes(trimmedCategory)) {
-      setFormError('Esta categoría ya existe');
+    const trimmed = newCategory.trim().toLowerCase();
+    if (!trimmed) return;
+
+    if (categories.includes(trimmed)) {
+      setFormError('Esa categoría ya existe.');
       return;
     }
-    
-    setCategories(prev => [...prev, trimmedCategory]);
-    setNewProduct(prev => ({ ...prev, category: trimmedCategory }));
+
+    setCategories((prev) => [...prev, trimmed]);
+    set('category', trimmed);
     setNewCategory('');
     setAddingCategory(false);
     setFormError(null);
-  };
-
-  const handleCancelCategory = () => {
-    setNewCategory('');
-    setAddingCategory(false);
-  };
-
-  const handleCategorySelect = (value: string) => {
-    if (value === '__add_new__') {
-      setAddingCategory(true);
-    } else {
-      setNewProduct(prev => ({ ...prev, category: value }));
-    }
   };
 
   return (
-    <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-red-400">Panel de Administración</h2>
+    <section className="surface" aria-label="Panel de administración">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <h2 className="legend-text text-sm text-signal-amber">Panel de administración</h2>
         <button
           type="button"
-          onClick={() => setShowAddProduct(!showAddProduct)}
-          className="btn-success flex items-center space-x-2"
+          onClick={() => setIsOpen((v) => !v)}
           disabled={isSubmitting}
+          className="btn-success flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" />
-          <span>{showAddProduct ? 'Cerrar' : 'Añadir Producto'}</span>
+          {isOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {isOpen ? 'Cerrar' : 'Añadir producto'}
         </button>
       </div>
 
-      {showAddProduct && (
-        <form className="bg-gray-700 p-4 rounded-lg space-y-4" onSubmit={handleAddProduct}>
+      {isOpen && (
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 border-t border-panel-edge p-4"
+        >
           {formError && (
-            <div className="text-red-500 font-semibold mb-2 p-2 bg-red-100 dark:bg-red-900 rounded">
+            <p
+              role="alert"
+              className="engraved border-signal-red/50 px-3 py-2 font-data text-[11px] text-signal-red"
+            >
               {formError}
-            </div>
+            </p>
           )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nombre del producto */}
-            <input
-              type="text"
-              placeholder="Nombre del producto *"
-              value={newProduct.name}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
-              className="input-field"
-              required
-              disabled={isSubmitting}
-            />
 
-            {/* Selector de categoría */}
-            {!addingCategory ? (
-              <select
-                value={newProduct.category}
-                onChange={(e) => handleCategorySelect(e.target.value)}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-name" className="legend-text text-[11px] text-legend-dim">
+                Nombre *
+              </label>
+              <input
+                id="p-name"
+                type="text"
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
                 className="input-field"
                 disabled={isSubmitting}
                 required
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </option>
-                ))}
-                <option value="__add_new__">+ Crear nueva categoría</option>
-              </select>
-            ) : (
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder="Nueva categoría"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="input-field flex-1"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className="btn-primary px-3 py-2"
-                  onClick={handleAddCategory}
-                  disabled={isSubmitting || !newCategory.trim()}
-                >
-                  ✓
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2"
-                  onClick={handleCancelCategory}
-                  disabled={isSubmitting}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
+              />
+            </div>
 
-            {/* Precio */}
-            <input
-              type="number"
-              placeholder="Precio (€) *"
-              value={newProduct.price}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, price: e.target.value }))}
-              className="input-field"
-              min="0"
-              step="0.01"
-              required
-              disabled={isSubmitting}
-            />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-category" className="legend-text text-[11px] text-legend-dim">
+                Categoría *
+              </label>
+              {!addingCategory ? (
+                <select
+                  id="p-category"
+                  value={form.category}
+                  onChange={(e) =>
+                    e.target.value === '__new__'
+                      ? setAddingCategory(true)
+                      : set('category', e.target.value)
+                  }
+                  className="input-field"
+                  disabled={isSubmitting}
+                  required
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Crear nueva categoría</option>
+                </select>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nombre de la categoría"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="input-field flex-1"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    disabled={isSubmitting || !newCategory.trim()}
+                    className="btn-success px-3"
+                  >
+                    OK
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCategory('');
+                      setAddingCategory(false);
+                    }}
+                    disabled={isSubmitting}
+                    className="btn-secondary px-3"
+                  >
+                    No
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {/* Stock */}
-            <input
-              type="number"
-              placeholder="Stock inicial *"
-              value={newProduct.stock}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, stock: e.target.value }))}
-              className="input-field"
-              min="0"
-              required
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-price" className="legend-text text-[11px] text-legend-dim">
+                Precio (€) *
+              </label>
+              <input
+                id="p-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => set('price', e.target.value)}
+                className="input-field font-data tabular"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-stock" className="legend-text text-[11px] text-legend-dim">
+                Stock inicial *
+              </label>
+              <input
+                id="p-stock"
+                type="number"
+                min="0"
+                value={form.stock}
+                onChange={(e) => set('stock', e.target.value)}
+                className="input-field font-data tabular"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-url" className="legend-text text-[11px] text-legend-dim">
+                URL de imagen
+              </label>
+              <input
+                id="p-url"
+                type="url"
+                value={form.image_url}
+                onChange={(e) => set('image_url', e.target.value)}
+                className="input-field font-data text-[12px]"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="p-file" className="legend-text text-[11px] text-legend-dim">
+                O subir archivo
+              </label>
+              <input
+                id="p-file"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                className="input-field file:mr-3 file:border-0 file:bg-panel-edge file:px-3 file:py-1 file:font-legend file:uppercase file:tracking-legend file:text-[11px] file:text-legend"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="p-desc" className="legend-text text-[11px] text-legend-dim">
+              Descripción
+            </label>
+            <textarea
+              id="p-desc"
+              rows={3}
+              value={form.description}
+              onChange={(e) => set('description', e.target.value)}
+              className="input-field resize-none"
               disabled={isSubmitting}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* URL de imagen */}
-            <input
-              type="url"
-              placeholder="URL de la imagen (opcional)"
-              value={newProduct.image_url}
-              onChange={(e) => setNewProduct(prev => ({ ...prev, image_url: e.target.value }))}
-              className="input-field"
-              disabled={isSubmitting}
-            />
-
-            {/* Archivo de imagen */}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-              className="input-field"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {/* Descripción */}
-          <textarea
-            placeholder="Descripción del producto"
-            value={newProduct.description}
-            onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
-            className="input-field h-20 resize-none"
-            disabled={isSubmitting}
-          />
-
-          {/* Botones de acción */}
-          <div className="flex space-x-3">
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Guardando...' : 'Añadir Producto'}
+          <div className="flex gap-3">
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando…' : 'Añadir producto'}
             </button>
             <button
               type="button"
@@ -307,7 +322,7 @@ const AdminPanel: React.FC = () => {
           </div>
         </form>
       )}
-    </div>
+    </section>
   );
 };
 

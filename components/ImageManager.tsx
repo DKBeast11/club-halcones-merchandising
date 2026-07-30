@@ -1,184 +1,203 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import NextImage from 'next/image';
 import { Trash2, Upload } from 'lucide-react';
+import { ProductImage } from '@/types';
+import { adminFetch } from '@/lib/adminFetch';
 
-interface ProductImage {
-  id: string;
-  product_id: string;
-  image_url: string;
-  position?: number;
-  created_at?: string;
+const MAX_IMAGES = 5;
+
+interface ImageManagerProps {
+  productId: string;
 }
 
-const ImageManager: React.FC<{ productId: string; onClose: () => void }> = ({ productId, onClose }) => {
+const ImageManager: React.FC<ImageManagerProps> = ({ productId }) => {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/images?productId=${productId}`);
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
+      const res = await adminFetch(`/api/admin/images?productId=${productId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      // Asegurar que data es un array
       setImages(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching images:', err);
-      setImages([]); // Establecer array vacío en caso de error
+      console.error('Error al cargar las imágenes:', err);
+      setError(err instanceof Error ? err.message : 'No se han podido cargar las imágenes.');
+      setImages([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [productId]);
 
   useEffect(() => {
     fetchImages();
-  }, [productId]);
+  }, [fetchImages]);
+
+  const remaining = MAX_IMAGES - images.length;
 
   const handleUpload = async () => {
     if (!files || files.length === 0) return;
-    
-    // Verificar límite de 5 imágenes totales
-    if (images.length + files.length > 5) {
-      alert(`No puedes subir más de 5 imágenes. Actualmente tienes ${images.length} imágenes. Selecciona máximo ${5 - images.length} archivos.`);
+
+    setError('');
+
+    if (files.length > remaining) {
+      setError(
+        `Solo caben ${remaining} imagen(es) más. Tienes ${images.length} de ${MAX_IMAGES}.`
+      );
       return;
     }
-    
+
     setUploading(true);
-    setUploadProgress('');
-    
+    setStatus('');
+
     try {
       const fileArray = Array.from(files);
-      let uploadedCount = 0;
-      
+      let uploaded = 0;
+
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
-        setUploadProgress(`Subiendo imagen ${i + 1} de ${fileArray.length}...`);
-        
+        setStatus(`Subiendo ${i + 1} de ${fileArray.length}…`);
+
         const form = new FormData();
         form.append('file', file);
         form.append('productId', productId);
 
-        const res = await fetch('/api/admin/images', {
-          method: 'POST',
-          body: form
-        });
+        const res = await adminFetch('/api/admin/images', { method: 'POST', body: form });
 
         if (res.ok) {
-          uploadedCount++;
+          uploaded++;
         } else {
-          const errorData = await res.json();
-          console.error(`Error subiendo archivo ${file.name}:`, errorData);
-          alert(`Error subiendo ${file.name}: ${errorData.error || 'Error desconocido'}`);
+          const data = await res.json().catch(() => ({}));
+          setError(`No se pudo subir ${file.name}: ${data.error || 'error desconocido'}`);
         }
       }
 
-      if (uploadedCount > 0) {
+      if (uploaded > 0) {
         setFiles(null);
-        // Limpiar el input de archivos
-        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
-        
-        setUploadProgress(`${uploadedCount} imagen(es) subida(s) correctamente`);
+        const input = document.getElementById('image-upload') as HTMLInputElement | null;
+        if (input) input.value = '';
+
+        setStatus(`${uploaded} imagen(es) subida(s).`);
         await fetchImages();
-        
-        // Limpiar mensaje después de 3 segundos
-        setTimeout(() => setUploadProgress(''), 3000);
+        setTimeout(() => setStatus(''), 3000);
+      } else {
+        setStatus('');
       }
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Error durante la subida de archivos');
+    } catch (err) {
+      console.error('Error durante la subida:', err);
+      setError('Ha fallado la subida. Inténtalo de nuevo.');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    setError('');
     try {
-      const res = await fetch(`/api/admin/images/${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/images/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        // Actualizar el estado local filtrando la imagen eliminada
-        setImages(prevImages => prevImages.filter(i => i.id !== id));
+        setImages((prev) => prev.filter((i) => i.id !== id));
       } else {
-        const errorData = await res.json();
-        console.error('Delete failed:', errorData);
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'No se ha podido eliminar la imagen.');
       }
-    } catch (error) {
-      console.error('Delete error:', error);
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      setError('No se ha podido eliminar la imagen.');
     }
   };
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-white">Gestionar imágenes</h3>
-        <button className="btn-secondary" onClick={onClose}>Cerrar</button>
-      </div>
-
-      <div className="mb-4 p-4 bg-gray-700 rounded-lg">
-        <div className="flex flex-col gap-3">
-          <label className="text-white text-sm font-medium">
-            Subir nuevas imágenes (máximo 5 total):
+    <div className="flex flex-col gap-5">
+      <div className="engraved flex flex-col gap-3 p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor="image-upload" className="legend-text text-[12px] text-legend">
+            Subir imágenes
           </label>
-          <div className="text-xs text-gray-400">
-            Imágenes actuales: {images.length}/5
-          </div>
-          <input 
-            type="file" 
-            accept="image/*" 
-            multiple
-            onChange={e => setFiles(e.target.files)}
-            className="text-white bg-gray-600 border border-gray-500 rounded px-3 py-2"
-          />
-          {files && files.length > 0 && (
-            <div className="text-sm text-gray-300">
-              {files.length} archivo(s) seleccionado(s): {Array.from(files).map(f => f.name).join(', ')}
-            </div>
-          )}
-          {uploadProgress && (
-            <div className="text-sm text-blue-400">{uploadProgress}</div>
-          )}
-          <button 
-            className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleUpload} 
-            disabled={!files || files.length === 0 || isLoading || uploading || images.length >= 5}
-          > 
-            <Upload className="w-4 h-4" /> 
-            {uploading ? 'Subiendo...' : `Subir ${files ? files.length : 0} Imagen(es)`}
-          </button>
+          <span className="font-data text-[11px] tabular text-legend-dim">
+            {images.length} / {MAX_IMAGES}
+          </span>
         </div>
+
+        <input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => setFiles(e.target.files)}
+          disabled={uploading || remaining <= 0}
+          className="input-field file:mr-3 file:border-0 file:bg-panel-edge file:px-3 file:py-1 file:font-legend file:uppercase file:tracking-legend file:text-[11px] file:text-legend"
+        />
+
+        {files && files.length > 0 && (
+          <p className="text-[12px] text-legend-dim">
+            {files.length} archivo(s): {Array.from(files).map((f) => f.name).join(', ')}
+          </p>
+        )}
+
+        {status && <p className="font-data text-[11px] text-signal-green">{status}</p>}
+        {error && <p className="font-data text-[11px] text-signal-red">{error}</p>}
+
+        {remaining <= 0 && (
+          <p className="font-data text-[11px] text-signal-amber">
+            Límite alcanzado. Elimina alguna para subir más.
+          </p>
+        )}
+
+        <button
+          type="button"
+          className="btn-primary flex items-center justify-center gap-2"
+          onClick={handleUpload}
+          disabled={!files || files.length === 0 || isLoading || uploading || remaining <= 0}
+        >
+          <Upload className="h-4 w-4" />
+          {uploading ? 'Subiendo…' : `Subir ${files ? files.length : 0}`}
+        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {isLoading && <div className="col-span-3 text-center text-gray-400">Cargando...</div>}
-        {!isLoading && Array.isArray(images) && images.length === 0 && (
-          <div className="col-span-3 text-center text-gray-400">No hay imágenes</div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {isLoading && (
+          <p className="col-span-full py-6 text-center font-data text-[11px] text-legend-dim">
+            Cargando…
+          </p>
         )}
-        {!isLoading && Array.isArray(images) && images.length >= 5 && (
-          <div className="col-span-3 text-center text-yellow-400 text-sm mb-2">
-            Has alcanzado el límite máximo de 5 imágenes por producto
-          </div>
+
+        {!isLoading && images.length === 0 && (
+          <p className="col-span-full py-6 text-center font-data text-[11px] text-legend-dim">
+            Este producto todavía no tiene imágenes.
+          </p>
         )}
-        {!isLoading && Array.isArray(images) && images.map((img, index) => (
-          <div key={img.id} className="relative">
-            <img src={img.image_url} alt={`Imagen ${index + 1}`} className="w-full h-32 object-cover rounded" />
-            <div className="absolute top-1 left-1 bg-black bg-opacity-60 text-white text-xs px-1 rounded">
-              #{img.position || index + 1}
+
+        {!isLoading &&
+          images.map((img, i) => (
+            <div key={img.id} className="engraved relative aspect-square overflow-hidden">
+              <NextImage
+                src={img.image_url}
+                alt={`Imagen ${i + 1}`}
+                fill
+                sizes="(max-width: 640px) 50vw, 200px"
+                className="object-cover"
+              />
+              <span className="absolute left-1 top-1 bg-panel/80 px-1.5 font-data text-[10px] text-legend">
+                {img.position ?? i + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleDelete(img.id)}
+                aria-label={`Eliminar imagen ${i + 1}`}
+                className="absolute right-1 top-1 border border-panel-edge bg-panel/80 p-1 text-signal-red transition-colors hover:bg-signal-red hover:text-panel"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <button
-              onClick={() => handleDelete(img.id)}
-              className="absolute top-1 right-1 bg-red-600 p-1 rounded text-white hover:bg-red-700 transition-colors"
-              aria-label="Eliminar imagen"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
