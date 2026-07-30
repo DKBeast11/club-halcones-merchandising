@@ -1,0 +1,167 @@
+{
+  "_nota": "Respaldo de product_images previo a pasar el bucket Products a publico (2026-07-30). Los tokens de las URLs firmadas se han redactado: son credenciales de acceso a storage y este repositorio es publico. Para revertir hay que volver a poner el bucket en privado y regenerar las firmas; las rutas de los objetos, que es lo que importa, estan intactas.",
+  "filas": [
+    {
+      "id": "9b1e180f-b5bb-41b2-9f86-9c5cb9c9fce5",
+      "product_id": "036b94ba-ea20-49f9-94e0-f5381c8910b3",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/462_SINPALO.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "e0e2c7f7-e24b-4a17-aeaf-8d8357cac75c",
+      "product_id": "066599c8-ee6e-473c-9d46-652ca13a6157",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18-WARRIORS.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "b939e0e9-787e-4e06-912b-08f44600dec1",
+      "product_id": "1e19f613-1d2d-4215-a4d8-7111a4163462",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/MISC_HORNETBEE.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "af839351-bd14-4de9-b993-740d3715b90f",
+      "product_id": "257e02dc-002a-4ab9-b968-68b9cb2f7db6",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/FLAG_F18.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "c11abb2c-05d0-477c-b254-08b7d84ef1e2",
+      "product_id": "2f70261f-c46e-443b-8fc5-faf97937fe31",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/462_HALCON_RED.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "580d67e1-9645-4a00-8d08-7d56a200bbee",
+      "product_id": "33bc7af1-0ad9-4bd6-bbfd-4906f0bd54b6",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_STARWARS.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "dfd50540-fdcd-4789-a221-007c73dd49d3",
+      "product_id": "39b1802d-90b1-47e9-9bd2-d8c91279aa22",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/462_HALCON.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "e5c3dd78-fe75-4dc1-bf2f-e6e076df7bf5",
+      "product_id": "474763a8-7bdc-492c-9ae2-043ff1a5d53f",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/ALA46_DORADO.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "33a33890-e2d0-423b-a674-7d5f3650afdc",
+      "product_id": "52a44698-35b1-4be3-9261-a136ee25dbd8",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/MISCELANEA/LANYARD_462.jpg?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "22305896-636d-4a17-9ff5-07ad1e005e5c",
+      "product_id": "52a44698-35b1-4be3-9261-a136ee25dbd8",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/public/product-images/52a44698-35b1-4be3-9261-a136ee25dbd8_1759176177210.jpg",
+      "position": 1
+    },
+    {
+      "id": "1a9d960b-6632-4ee0-84db-60f72fe5af81",
+      "product_id": "52a44698-35b1-4be3-9261-a136ee25dbd8",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/public/product-images/52a44698-35b1-4be3-9261-a136ee25dbd8_1759176178522.jpg",
+      "position": 2
+    },
+    {
+      "id": "47a6f985-0bce-43ee-8657-02222f0c5516",
+      "product_id": "52a44698-35b1-4be3-9261-a136ee25dbd8",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/public/product-images/52a44698-35b1-4be3-9261-a136ee25dbd8_1759176179280.jpg",
+      "position": 3
+    },
+    {
+      "id": "0135e740-d0d7-424e-899e-b9fc0f5de82e",
+      "product_id": "7894657d-6385-4489-9d03-4d0ca3772bf5",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/462_RIDINGINPARADISE.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "9f646a4a-6109-4235-ae68-7f33a75e517e",
+      "product_id": "9b486632-47fd-42f3-9381-84adf5a097eb",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_1000HORAS.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "71055480-82c6-4f02-a4f7-912bb98edd07",
+      "product_id": "ae046c64-095a-428f-88bb-d1a0aeb840dd",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/MISC_PUROGOFIO.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "4bccd757-660c-43ab-ae3e-48f4460783bb",
+      "product_id": "b1616225-a7a1-40d6-8a41-36528e07e20d",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_500HORAS.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "2a1d7f8a-6b57-4031-a469-ba08cdd49f26",
+      "product_id": "c179ae94-e756-4972-8bba-ba2ed58aaedb",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_HORNET_RED.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "a265a67c-7cdb-4a7d-be99-827e1b17cc82",
+      "product_id": "cde18903-fb03-4714-a99b-fcac759e5b66",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_PLANE.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "69d3413d-24ed-496b-8ed7-6a967c7654e1",
+      "product_id": "cf861c9b-b9a4-4830-a07c-a1ac1c03abac",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/MISC_SIDEWINDER.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "7d591e6f-4689-4f36-962b-1d0f795312c8",
+      "product_id": "d082d1d7-31fb-4f61-bf19-adb50e730148",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/F18_HORNET_BLUE.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "34924055-d2ae-41b7-820f-a007cab6c1ef",
+      "product_id": "d81b5e91-0648-4729-9595-c2b3e4e0de07",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/LLAVEROS/462_RBF_WHITE_1.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "cbc1063d-0e08-4cf8-91a7-ccc773c9b1ae",
+      "product_id": "d8f91879-dab4-41c3-93f7-74b6c43ba278",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/APOYO_AL_VUELO.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "8e08af2a-8c22-4370-a6f8-abb962e5abfd",
+      "product_id": "da72091a-95cc-4bf5-9e93-e6deec99774b",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/MISC_BANZAI.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "4518ca2d-856c-455d-a0ca-36af37fdd199",
+      "product_id": "da79b767-3406-4e36-ba0d-368e41e10ff6",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/LLAVEROS/462_RBF_RED_1.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "0fc8dd18-2e59-4fe9-8754-3557a52c1598",
+      "product_id": "de4ea065-d53f-4e93-b400-9eddf174f67e",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/LLAVEROS/462_RBF_PINK_1.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "4097c28c-524d-4629-b648-099846c64584",
+      "product_id": "eab3f3f8-e074-485e-a86a-50c42c6caa94",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/462_HALCON_RUSSIAN.JPG?token=<redactado>",
+      "position": 0
+    },
+    {
+      "id": "9588b5dd-62b9-49ee-952b-88fa213930de",
+      "product_id": "f4019f8a-bdd0-453f-bb1e-46e9ef55cea2",
+      "image_url": "https://abvziolumaqmacbfweci.supabase.co/storage/v1/object/sign/Products/PARCHES/EPV_RIDING_IN_PARADISE.JPG?token=<redactado>",
+      "position": 0
+    }
+  ]
+}
