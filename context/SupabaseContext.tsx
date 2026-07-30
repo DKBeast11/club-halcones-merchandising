@@ -60,8 +60,7 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         updated_at: item.updated_at
       })) || [];
 
-  console.log('Productos cargados desde Supabase:', formattedProducts);
-  setProducts(formattedProducts);
+      setProducts(formattedProducts);
     } catch (err) {
       console.error('Error loading products:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');

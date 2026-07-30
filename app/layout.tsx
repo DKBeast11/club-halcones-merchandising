@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
@@ -14,7 +14,12 @@ export const metadata: Metadata = {
   description: 'Tienda oficial de merchandising del Club Halcones - F-18 & Eurofighter',
   keywords: 'F-18, Eurofighter, merchandising, parches, camisetas, llaveros, aviación',
   authors: [{ name: 'Club Halcones' }],
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+// Desde Next 14 el viewport va en su propio export, no dentro de metadata.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
