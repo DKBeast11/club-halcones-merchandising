@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Club Halcones — dirección "Panel de parches" (especimen)</title>
+<style>
+  /* ============================================================
+     DIRECCIÓN VISUAL: PANEL DE PARCHES  —  NO DESARROLLADA
+     Especimen de referencia. Ver el .md junto a este archivo.
+
+     Conceit: un tablero de velcro con los artículos cosidos
+     encima. Cada tarjeta es un objeto físico; el agotado se
+     sobreimprime en vez de apagarse.
+     ============================================================ */
+
+  :root {
+    --board:    #3B4035;   /* oliva de tejido de bucle */
+    --board-2:  #343930;
+    --patch:    #EFEDE5;   /* hueso del parche */
+    --patch-2:  #E3E0D5;
+    --ink:      #22251E;
+    --muted:    #6B6F62;
+    --bullion:  #A8831F;   /* hilo bordado */
+    --squadron: #9E2B25;   /* rojo de insignia */
+
+    --disp: Copperplate, "Copperplate Gothic Bold", Georgia, "Palatino Linotype", serif;
+    --body: Candara, "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --data: Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--board);
+    background-image:
+      repeating-linear-gradient(45deg,  rgba(0,0,0,.055)     0 1px, transparent 1px 4px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,.028) 0 1px, transparent 1px 4px);
+    color: var(--patch);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- cabecera ---------- */
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid rgba(0,0,0,.28);
+  }
+  .mark {
+    font-family: var(--disp);
+    font-size: 25px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    margin: 0;
+    color: var(--patch);
+  }
+  .mark-sub {
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
+    color: #A9AC9C;
+    margin: 7px 0 0;
+    font-style: italic;
+  }
+
+  /* acceso admin como etiqueta cosida */
+  .tape {
+    font-family: var(--data);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: var(--patch-2);
+    color: var(--ink);
+    padding: 8px 16px;
+    border: 1px solid #C4C0B2;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+    position: relative;
+    cursor: pointer;
+  }
+  .tape::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px dashed rgba(34,37,30,.4);
+    pointer-events: none;
+  }
+
+  /* ---------- búsqueda y filtros ---------- */
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 18px 24px;
+  }
+  .find {
+    flex: 1 1 210px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: rgba(0,0,0,.2);
+    border: 1px solid rgba(0,0,0,.32);
+    padding: 10px 13px;
+  }
+  .find svg { width: 15px; height: 15px; flex: none; color: #9A9E8E; }
+  .find span { font-size: 13.5px; color: #9A9E8E; font-style: italic; }
+
+  .cat-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .leg {
+    font-family: var(--data);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    background: rgba(0,0,0,.18);
+    border: 1px solid rgba(0,0,0,.3);
+    color: #A9AC9C;
+    cursor: pointer;
+  }
+  .leg[aria-pressed="true"] {
+    background: var(--patch-2);
+    color: var(--ink);
+    border-color: #C4C0B2;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .leg:focus-visible, .tape:focus-visible {
+    outline: 2px solid var(--bullion);
+    outline-offset: 2px;
+  }
+
+  /* ---------- rejilla ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 20px;
+    padding: 8px 24px 40px;
+  }
+
+  /* ELEMENTO FIRMA: la tarjeta como objeto cosido */
+  .card {
+    background: var(--patch);
+    color: var(--ink);
+    border: 1px solid #C7C3B4;
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: transform .22s ease, box-shadow .22s ease;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1.5px dashed rgba(34,37,30,.28);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .card:hover {
+    transform: translateY(-4px) rotate(-0.35deg);
+    box-shadow: 0 9px 20px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+    .card:hover { transform: none; }
+  }
+
+  .thumb {
+    aspect-ratio: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--patch-2);
+    margin: 13px 13px 0;
+    border-radius: 2px;
+  }
+  .thumb svg { width: 100%; height: 100%; display: block; }
+
+  .card-body {
+    padding: 15px 17px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .card h4 {
+    font-family: var(--disp);
+    font-size: 14.5px;
+    line-height: 1.24;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .card p {
+    font-size: 13px;
+    line-height: 1.48;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 14px 17px 17px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(34,37,30,.16);
+  }
+  .price {
+    font-family: var(--disp);
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+  .avail {
+    font-family: var(--data);
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .avail i { width: 6px; height: 6px; border-radius: 50%; background: #6F8A4F; flex: none; }
+  .avail.warn { color: var(--bullion); }
+  .avail.warn i { background: var(--bullion); }
+  .avail.out i { background: var(--squadron); }
+
+  /* agotado: sello sobreimpreso, la tarjeta NO se apaga */
+  .card.is-out { background: var(--patch-2); }
+  .card.is-out .thumb { opacity: .5; }
+  .stamp {
+    position: absolute;
+    top: 42%;
+    left: -6px; right: -6px;
+    transform: rotate(-7deg);
+    text-align: center;
+    font-family: var(--disp);
+    font-size: 15px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(158,43,37,.82);
+    border-top: 2px solid rgba(158,43,37,.7);
+    border-bottom: 2px solid rgba(158,43,37,.7);
+    padding: 5px 0;
+    margin: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* ---------- nota al pie ---------- */
+  .note {
+    margin: 0 24px 40px;
+    padding: 18px 20px;
+    border: 1px dashed rgba(255,255,255,.22);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #A9AC9C;
+  }
+  .note b { color: var(--patch); font-weight: 600; }
+  .note code { font-family: var(--data); font-size: 12.5px; }
+
+  @media (max-width: 640px) {
+    .bar, .tools { padding-left: 16px; padding-right: 16px; }
+    .grid { padding-left: 16px; padding-right: 16px; }
+    .note { margin-left: 16px; margin-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="bar">
+    <div>
+      <h1 class="mark">Club Halcones</h1>
+      <p class="mark-sub">Merchandising oficial del club</p>
+    </div>
+    <button type="button" class="tape">Admin</button>
+  </div>
+
+  <div class="tools">
+    <div class="find">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <span>Buscar en el tablero…</span>
+    </div>
+    <div class="cat-row">
+      <button type="button" class="leg" aria-pressed="true">Todo</button>
+      <button type="button" class="leg" aria-pressed="false">Parches</button>
+      <button type="button" class="leg" aria-pressed="false">Camisetas</button>
+      <button type="button" class="leg" aria-pressed="false">Llaveros</button>
+      <button type="button" class="leg" aria-pressed="false">Miscelánea</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <article class="card">
+      <div class="thumb">
+        <svg viewBox="0 0 200 200" aria-label="Parche F-18 Super Hornet"><g fill="none" stroke="#22251E" stroke-width="2.5"><path d="M100 42 62 60v52c0 26 20 42 38 48 18-6 38-22 38-48V60Z"/><path d="M100 74 84 96h32Z" fill="#A8831F" stroke="none"/><path d="M70 118h60M78 132h44"/></g></svg>
+      </div>
+      <div class="card-body">
+        <h4>Parche F-18 Super Hornet</h4>
+        <p>Parche bordado oficial del F-18 Super Hornet.</p>
+      </div>
+      <div class="foot">
+        <span class="price">12,99 €</span>
+        <span class="avail"><i></i>25 ud.</span>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb">
+        <svg viewBox="0 0 200 200" aria-label="Camiseta Eurofighter Typhoon"><g fill="none" stroke="#22251E" stroke-width="2.5"><path d="M74 48 52 62l10 26 12-6v70h52V82l12 6 10-26-22-14-12 10h-28Z"/><path d="M100 96v34m-14-20h28" stroke="#A8831F"/></g></svg>
+      </div>
+      <div class="card-body">
+        <h4>Camiseta Eurofighter Typhoon</h4>
+        <p>Camiseta negra con diseño del Eurofighter Typhoon.</p>
+      </div>
+      <div class="foot">
+        <span class="price">24,99 €</span>
+        <span class="avail"><i></i>15 ud.</span>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb">
+        <svg viewBox="0 0 200 200" aria-label="Llavero F-18 metálico"><g fill="none" stroke="#22251E" stroke-width="2.5"><circle cx="100" cy="56" r="13"/><path d="M100 69v18"/><path d="M100 87 66 104v14l30-6v22l-12 9v8l16-5 16 5v-8l-12-9v-22l30 6v-14Z" stroke="#A8831F"/></g></svg>
+      </div>
+      <div class="card-body">
+        <h4>Llavero F-18 Metálico</h4>
+        <p>Llavero metálico con forma de F-18.</p>
+      </div>
+      <div class="foot">
+        <span class="price">8,99 €</span>
+        <span class="avail warn"><i></i>Últimas 3</span>
+      </div>
+    </article>
+
+    <article class="card is-out">
+      <div class="thumb">
+        <svg viewBox="0 0 200 200" aria-label="Parche Escuadrón Ala 15"><g fill="none" stroke="#22251E" stroke-width="2.5"><circle cx="100" cy="100" r="46"/><path d="M100 62v76M62 100h76"/><circle cx="100" cy="100" r="20"/></g></svg>
+      </div>
+      <p class="stamp">Sin existencias</p>
+      <div class="card-body">
+        <h4>Parche Escuadrón Ala 15</h4>
+        <p>Parche oficial del Escuadrón Ala 15.</p>
+      </div>
+      <div class="foot">
+        <span class="price">10,99 €</span>
+        <span class="avail out"><i></i>0 ud.</span>
+      </div>
+    </article>
+  </div>
+
+  <p class="note">
+    <b>Dirección no desarrollada.</b> Se conserva en la rama
+    <code>diseno/panel-de-parches</code> por si en el futuro interesa otro enfoque
+    para Club Halcones o para un proyecto distinto. La dirección elegida fue
+    "Panel de vuelo". Los dibujos de producto son marcas de posición en SVG, no
+    las fotos reales del bucket de Supabase. Detalles, tokens y pendientes en el
+    <code>.md</code> junto a este archivo.
+  </p>
+
+</div>
+</body>
+</html>
