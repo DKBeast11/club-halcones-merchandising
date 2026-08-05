@@ -1,10 +1,29 @@
 -- Esquema de base de datos para Club Halcones Merchandising
 
+-- Tabla de categorías. Sustituye al CHECK que antes cerraba
+-- products.category a cuatro valores escritos a mano.
+-- Ver supabase/migrations/20260805_categories_table.sql.
+CREATE TABLE categories (
+  -- Identificador en minúsculas y sin acentos: 'miscelanea'.
+  id VARCHAR(50) PRIMARY KEY,
+  -- Nombre presentable, con acentos: 'Miscelánea'.
+  name VARCHAR(80) NOT NULL,
+  -- Orden en la barra de filtros. Menor primero.
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+INSERT INTO categories (id, name, position) VALUES
+  ('parches',    'Parches',    1),
+  ('camisetas',  'Camisetas',  2),
+  ('llaveros',   'Llaveros',   3),
+  ('miscelanea', 'Miscelánea', 4);
+
 -- Tabla de productos
 CREATE TABLE products (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('parches', 'camisetas', 'llaveros', 'miscelanea')),
+  category VARCHAR(50) NOT NULL REFERENCES categories(id) ON UPDATE CASCADE ON DELETE RESTRICT,
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
   stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   image_url TEXT,
@@ -95,11 +114,18 @@ INSERT INTO product_images (product_id, image_url, position) VALUES
 
 -- Políticas de seguridad (RLS)
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Política para productos: todos pueden leer
 CREATE POLICY "Products are viewable by everyone" ON products
+  FOR SELECT USING (true);
+
+-- Las categorías se leen sin sesión, igual que el catálogo. No hay política de
+-- escritura a propósito: darlas de alta pasa por /api/admin/categories, que
+-- usa service_role (salta RLS) después de comprobar la sesión de admin.
+CREATE POLICY "Las categorías se leen sin sesión" ON categories
   FOR SELECT USING (true);
 
 -- Política para productos: solo admins pueden modificar
