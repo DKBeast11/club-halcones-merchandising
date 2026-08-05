@@ -1,8 +1,9 @@
 # Reorganización y rediseño de Club Halcones
 
-**Última sesión:** 2026-07-30
+**Última sesión:** 2026-08-05
 **Punto de partida:** `2c289fa` (21-oct-2025) — 2.084 líneas, 21 archivos
-**Estado:** fases 0, 1 y 3 hechas y commiteadas en rama. Sin fusionar ni desplegar.
+**Estado:** fases 0, 1 y 3 hechas, más las categorías. La preview de Vercel
+construye y está en verde. Sigue **sin fusionar a `main`**.
 
 ---
 
@@ -13,7 +14,7 @@
 | Rama | Estado | Qué es |
 |---|---|---|
 | `main` | `2c289fa`, intacta | Lo que hay en producción. No se ha tocado. |
-| `rediseno/panel-de-vuelo` | `7907df4`, **subida** | El trabajo de esta sesión. 5 commits. |
+| `rediseno/panel-de-vuelo` | `a9a0355`, **subida** | Todo el trabajo. 8 commits. Preview en verde. |
 | `diseno/panel-de-parches` | `8f5095c`, **solo local** | Dirección visual descartada, sin desarrollar. ⚠ Se pierde si formateas: `git push -u origin diseno/panel-de-parches` |
 
 Los commits de `rediseno/panel-de-vuelo` están ordenados para que **cada uno
@@ -28,31 +29,48 @@ no hay puntos rotos.
   LLAVEROS, MISCELANEA, PARCHES.
 - **Bucket `product-images`**: público y vacío. Lo creaba sola la API. Ya no se
   usa; se puede borrar.
+- **Tabla `categories`**: creada el 05-08-2026. Cuatro filas. `products.category`
+  es ahora clave ajena contra ella, no un `CHECK`.
 - **Vercel**: producción desplegada desde `main` (último deploy: 21-oct-2025).
-  La preview de la rama **falla** — ver bloqueante abajo.
+  La preview de la rama **construye correctamente** desde el 05-08-2026.
 
 ---
 
-## 2. ⚠ Bloqueante para retomar
+## 2. ✅ El bloqueante, resuelto el 05-08-2026
 
-**La preview de Vercel no construye.** Las variables de Supabase están
-configuradas solo para el entorno *Production*, no para *Preview*.
+**El diagnóstico de la sesión anterior era incorrecto y se deja escrito aquí
+porque costó tiempo.** No eran las variables de entorno. La preview moría a los
+**3 segundos**, que es demasiado pronto para ser un fallo de compilación: ni
+siquiera llegaba a `next build`. El log decía `Command "npm install" exited
+with 1`, con un ERESOLVE.
 
-Desde que se quitaron las credenciales hardcodeadas, `lib/supabase.ts` falla el
-build si faltan. Eso es deliberado: al ser variables `NEXT_PUBLIC_` se incrustan
-al compilar, así que si faltan la aplicación queda rota en ejecución igualmente.
-Mejor enterarse antes de desplegar.
+La causa: **`lucide-react@0.294.0`** (diciembre de 2023) declara como peer
+`react "^16.5.1 || ^17.0.0 || ^18.0.0"`. La fase 1 subió a React 19, así que npm
+dejó de poder resolver el árbol. En local no se notó porque el árbol ya
+instalado seguía siendo válido y nadie volvió a instalar desde cero.
 
-**Arreglo:** Vercel → `club-halcones-merchandising` → Settings → Environment
-Variables. Marcar **Production, Preview y Development** en las tres:
+Arreglado en `f01b36d` subiendo a `lucide-react@^0.577.0`, la última de la rama
+0.x. **No se subió a la 1.x** a propósito: retira los alias antiguos, y este
+proyecto importa `AlertTriangle` y `AlertCircle`, que allí se llaman
+`TriangleAlert` y `CircleAlert`.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+**Moraleja para la próxima:** un despliegue que falla en menos de 5 segundos no
+ha compilado nada. Antes de teorizar, leer el log del deploy.
 
-**Y de paso, comprobar si la `SUPABASE_SERVICE_ROLE_KEY` de Vercel tiene la
-errata** (ver trampa nº 2). Si es la misma que había en local, la subida de
-imágenes en producción lleva rota desde siempre. Nunca se llegó a verificar.
+### Las variables de Vercel, de paso
+
+El alcance de entornos no era el problema, pero sí faltaban **dos variables
+enteras**, que nunca habían existido allí:
+
+- `SUPABASE_SERVICE_ROLE_KEY` — añadida como **Sensitive**, Production +
+  Preview. Vercel no deja marcar Development en una variable sensible, y da
+  igual: en local se lee de `.env.local`. Sin ella `supabaseAdmin` quedaba en
+  `null`, así que **subir y borrar imágenes en producción no habría funcionado
+  nunca**.
+- `ADMIN_EMAILS` — añadida en todos los entornos.
+
+Las otras cuatro ya estaban en "All Environments" y la anon key de Vercel
+coincide con la de local.
 
 ---
 
@@ -91,8 +109,12 @@ Sin ese glob, Tailwind las purga y el testigo sale sin iluminar, sin ningún
 error visible.
 
 **6. `lucide-react` exporta un icono llamado `Image`** que choca con
-`next/image`. Se importa como `ImageIcon` donde haga falta. La versión instalada
-(0.294.0, dic-2023) no tiene el icono `Images` en plural.
+`next/image`. Se importa como `ImageIcon` donde haga falta.
+
+**7. Una dependencia vieja puede tumbar el despliegue sin tocar tu código.**
+`lucide-react` 0.294.0 no admitía React 19 y reventaba `npm install` solo en
+Vercel, porque en local el árbol ya instalado seguía valiendo. Ver la sección 2.
+Cuando subas una versión mayor de React, repasa los peers de todo lo demás.
 
 ---
 
@@ -139,23 +161,53 @@ Bugs arreglados: el `pointer-events-none` que mataba los controles de admin en
 los agotados, el botón "Ver Detalles" sin handler, y el modal sin `role`/Escape/
 focus trap.
 
+### Categorías: de `CHECK` a tabla ✅ (05-08-2026)
+
+El panel ofrecía "+ Crear nueva categoría" desde siempre, pero no podía
+funcionar: fallaba en **cuatro capas a la vez**. El `CHECK` de la base de datos,
+el tipo unión de `types/index.ts`, la lista escrita a mano de
+`SearchAndFilters.tsx` (así que un producto en una categoría nueva habría sido
+invisible salvo bajo "Todo"), y un `handleAddCategory` que solo tocaba un
+`useState` local y se perdía al recargar.
+
+Se eligió la **tabla `categories`** frente a relajar el `CHECK` o retirar la
+opción, porque es la única que no hay que volver a tocar: mantiene la
+integridad, y el nombre presentable y el orden dejan de vivir en el código.
+
+- Migración en `supabase/migrations/20260805_categories_table.sql`, **ya
+  aplicada** al proyecto de Supabase.
+- Clave ajena con `ON UPDATE CASCADE` (renombrar un identificador arrastra a sus
+  productos) y `ON DELETE RESTRICT` (no se borra una categoría con productos
+  dentro).
+- Lectura pública vía RLS; escribir exige `service_role` y pasa por
+  `/api/admin/categories`, con `requireAdmin` igual que las rutas de imágenes.
+- Verificado contra la base de datos real: categoría inexistente → `23503`;
+  alta de categoría y producto dentro de ella → 201 (la primera vez que eso
+  funciona); borrar categoría con productos → `23503`; escritura anónima →
+  bloqueada por RLS. Las sondas se limpiaron: quedan las 4 categorías y los 24
+  productos.
+- La barra de filtros ya sale de la tabla, con "Miscelánea" acentuada.
+
+**Para añadir una categoría sin pasar por el panel**, basta con insertar una
+fila en `categories`: aparece sola en el filtro, en la posición que le pongas.
+
 ---
 
 ## 5. Lo que queda
 
 Por orden de lo que haría primero:
 
-1. **Desbloquear la preview** (sección 2) y comprobar la clave de Vercel.
-2. **Prueba de extremo a extremo del gestor de imágenes.** Requiere contraseña,
+1. **Prueba de extremo a extremo del gestor de imágenes.** Requiere contraseña,
    así que la tiene que hacer una persona: entrar como admin → *Imágenes* en
    cualquier tarjeta → ver miniaturas → subir y borrar una. Sería la primera vez
    que eso funciona en local.
-3. **Rotar la anon key.** Estuvo hardcodeada en un repo público.
-4. **Las categorías nuevas no pueden funcionar.** `AdminPanel` deja crearlas,
-   pero el schema tiene `CHECK (category IN ('parches','camisetas','llaveros',
-   'miscelanea'))`. Cualquier otra la rechaza la base de datos al insertar. Hay
-   que decidir: tabla de categorías, relajar el CHECK, o retirar la opción.
-5. **Fase 2 — Estructura.** No empezada:
+2. **Repaso visual de la preview.** El build valida las variables de Supabase,
+   pero nadie ha mirado la página desplegada. La preview está tras el SSO de
+   Vercel, así que la tiene que abrir una persona con sesión.
+3. **Rotar la anon key.** Estuvo hardcodeada en un repo público. Ojo: es
+   `NEXT_PUBLIC_`, o sea que se incrusta al compilar. Rotarla deja producción
+   rota hasta que se vuelva a desplegar; hay que hacer las dos cosas seguidas.
+4. **Fase 2 — Estructura.** No empezada:
    - Colapsar los 3 contextos anidados. `ProductContext` envuelve a
      `SupabaseContext` sin aportar nada y mezcla estado de datos con estado de UI.
    - Catálogo a Server Component. Hoy todo es cliente y los productos se piden en
@@ -163,17 +215,18 @@ Por orden de lo que haría primero:
    - Separar `lib/supabase/client.ts` y `server.ts`.
    - Reorganizar `components/` por dominio.
    - Código muerto: `initialProducts` en `ProductContext.tsx:10-55`.
-6. **Fase 4 — Limpieza.** `README.md` describe persistencia en `localStorage` y
+5. **Fase 4 — Limpieza.** `README.md` describe persistencia en `localStorage` y
    "contraseña visual": nada de eso es cierto desde que se migró a Supabase Auth.
    Sobran 8 `.md` de andamiaje en la raíz (`PRUEBA_*.md`, `DEPLOY_STATUS.md`,
    `GUIA_VERCEL_DEPLOY.md`, `INSTRUCCIONES_RAPIDAS.md`, `TESTING.md`,
    `CONFIGURACION.md`). Decidir qué hacer con `generated-images/`.
-7. **Deriva entre `supabase/schema.sql` y la realidad.** El schema define
-   `admins.password_hash NOT NULL` y políticas RLS de `products` que dependen de
-   `admin_sessions.session_token`, pero `AuthContext` usa Supabase Auth y nunca
-   escribe en `admin_sessions`. Esa política probablemente no hace lo que dice.
-8. **Sin tests**, pese a que existe `TESTING.md`.
-9. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
+6. **Deriva entre `supabase/schema.sql` y la realidad.** Lo de las categorías ya
+   está al día. Queda lo demás: el schema define `admins.password_hash NOT NULL`
+   y políticas RLS de `products` que dependen de `admin_sessions.session_token`,
+   pero `AuthContext` usa Supabase Auth y nunca escribe en `admin_sessions`. Esa
+   política probablemente no hace lo que dice.
+7. **Sin tests**, pese a que existe `TESTING.md`.
+8. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
    conflicto de peers. Solo es un aviso.
 
 ---
