@@ -253,9 +253,11 @@ Por orden de lo que haría primero:
    así que la tiene que hacer una persona: entrar como admin → *Imágenes* en
    cualquier tarjeta → ver miniaturas → subir y borrar una. Sería la primera vez
    que eso funciona en local.
-2. **Repaso visual de la preview.** El build valida las variables de Supabase,
-   pero nadie ha mirado la página desplegada. La preview está tras el SSO de
-   Vercel, así que la tiene que abrir una persona con sesión.
+2. **Repaso visual de producción.** Ya fusionado y desplegado. Verificado por
+   máquina (HTTP 200, variables bien incrustadas, `service_role` sin filtrar,
+   rutas admin en 401), pero **nadie ha mirado la página con ojos**. Abrir
+   https://club-halcones-merchandising.vercel.app y comprobar que la rejilla,
+   los testigos de stock y el carrusel se ven como deben.
 3. ~~**Rotar la anon key.**~~ **Descartado el 05-08-2026, y no hay que volver a
    plantearlo.** Ver la sección 3 bis: la anon key es pública por diseño, la
    `service_role` nunca estuvo en el historial, y RLS bloquea toda escritura
