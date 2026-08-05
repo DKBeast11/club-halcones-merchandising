@@ -118,6 +118,53 @@ Cuando subas una versión mayor de React, repasa los peers de todo lo demás.
 
 ---
 
+## 3 bis. Quién puede tocar qué (verificado el 05-08-2026)
+
+Consultado con `pg_policies` sobre la base de datos real, no leído del
+`schema.sql`, que está desfasado. Ocho políticas:
+
+| Tabla | Política | Operación | Se cumple cuando |
+|---|---|---|---|
+| `products` | Products are viewable by everyone | SELECT | siempre |
+| `products` | Admins can insert products | INSERT | el `sub` del JWT está en `admins.uuid` |
+| `products` | Admins can update products | UPDATE | ídem |
+| `products` | Admins can delete products | DELETE | ídem |
+| `products` | Products are modifiable by admins only | ALL | **nunca** (mira abajo) |
+| `categories` | Las categorías se leen sin sesión | SELECT | siempre |
+| `product_images` | product_images_viewable_by_everyone | SELECT | siempre |
+| `admin_sessions` | Admins can view own sessions | SELECT | nunca (tabla vacía) |
+
+La política `ALL` compara contra `admin_sessions`, que está vacía y en la que
+`AuthContext` nunca escribe, así que no se cumple jamás. **No es un agujero:**
+las políticas se combinan con OR, de modo que una que nunca se cumple no
+concede nada, y las tres de `authenticated` son las que hacen el trabajo. Se
+puede borrar cuando se limpie el esquema, pero no corre prisa.
+
+**Comprobado con peticiones reales usando la anon key:** `INSERT` en `products`
+→ 401 `42501`; `UPDATE` → 0 filas; `INSERT` en `categories` → bloqueado;
+lectura → 200. O sea, con la clave pública solo se puede leer.
+
+### Por qué NO hay que rotar la anon key
+
+Estaba en la lista de pendientes "porque estuvo hardcodeada en un repo
+público". Se investigó y **no procede**:
+
+- **Es pública por diseño.** Va incrustada en el bundle que producción sirve a
+  cualquier visitante. Comprobado sobre los chunks reales del sitio en vivo.
+  Estar además en el repo no añade exposición.
+- **La `service_role` nunca se comiteó.** Barrido de todos los commits buscando
+  JWTs: aparece uno solo, y su payload es `"role":"anon"`.
+- **Su alcance lo pone RLS**, y RLS está cerrado a escritura (tabla de arriba).
+- **Rotarla cuesta caro:** en las claves legacy, rotar la anon rota el secreto
+  JWT, lo que regenera también la `service_role` e invalida todas las sesiones.
+  Y al ser `NEXT_PUBLIC_` se incrusta al compilar, así que el sitio queda roto
+  entre la rotación y el redespliegue.
+
+Lo que sí seguiría importando: que la `service_role` se filtre. Verificado que
+**no aparece** en ningún chunk servido al navegador.
+
+---
+
 ## 4. Lo que se hizo (commiteado en `rediseno/panel-de-vuelo`)
 
 ### Fase 0 — Seguridad ✅
@@ -133,11 +180,16 @@ comprobar quién llamaba**: cualquiera podía subir o borrar imágenes.
   la comprobación va delante de todo.
 
 > **Invariante de la que depende esta seguridad.** La autoridad es Supabase
-> Auth, no la tabla `admins` (está vacía; gatear por ella dejaría fuera a todo
-> el mundo). Es seguro porque el **registro público está desactivado** y solo
-> existe un usuario. `ADMIN_EMAILS` cierra la lista de forma explícita.
+> Auth. Es seguro porque el **registro público está desactivado** y solo existe
+> un usuario. `ADMIN_EMAILS` cierra la lista de forma explícita.
 > **Si algún día activas "Allow new users to sign up", `ADMIN_EMAILS` pasa de
 > ser un extra a ser lo único que separa un admin de cualquier registrado.**
+
+> **Corrección del 05-08-2026.** Este documento decía que la tabla `admins`
+> estaba vacía y que gatear por ella "dejaría fuera a todo el mundo". **Era
+> falso.** Tiene una fila, su `uuid` coincide con el id del usuario de Auth y el
+> correo también. Importa porque tres de las políticas RLS de `products`
+> dependen de esa tabla y funcionan bien gracias a ella. Ver sección 3 bis.
 
 ### Fase 1 — Toolchain ✅
 
@@ -204,9 +256,10 @@ Por orden de lo que haría primero:
 2. **Repaso visual de la preview.** El build valida las variables de Supabase,
    pero nadie ha mirado la página desplegada. La preview está tras el SSO de
    Vercel, así que la tiene que abrir una persona con sesión.
-3. **Rotar la anon key.** Estuvo hardcodeada en un repo público. Ojo: es
-   `NEXT_PUBLIC_`, o sea que se incrusta al compilar. Rotarla deja producción
-   rota hasta que se vuelva a desplegar; hay que hacer las dos cosas seguidas.
+3. ~~**Rotar la anon key.**~~ **Descartado el 05-08-2026, y no hay que volver a
+   plantearlo.** Ver la sección 3 bis: la anon key es pública por diseño, la
+   `service_role` nunca estuvo en el historial, y RLS bloquea toda escritura
+   anónima. Rotarla no gana seguridad y sí cuesta una caída.
 4. **Fase 2 — Estructura.** No empezada:
    - Colapsar los 3 contextos anidados. `ProductContext` envuelve a
      `SupabaseContext` sin aportar nada y mezcla estado de datos con estado de UI.
@@ -221,10 +274,10 @@ Por orden de lo que haría primero:
    `GUIA_VERCEL_DEPLOY.md`, `INSTRUCCIONES_RAPIDAS.md`, `TESTING.md`,
    `CONFIGURACION.md`). Decidir qué hacer con `generated-images/`.
 6. **Deriva entre `supabase/schema.sql` y la realidad.** Lo de las categorías ya
-   está al día. Queda lo demás: el schema define `admins.password_hash NOT NULL`
-   y políticas RLS de `products` que dependen de `admin_sessions.session_token`,
-   pero `AuthContext` usa Supabase Auth y nunca escribe en `admin_sessions`. Esa
-   política probablemente no hace lo que dice.
+   está al día. Queda: el schema declara `admins.password_hash NOT NULL`, pero
+   la tabla real **no tiene esa columna** (es `uuid, email, name, created_at`),
+   y le faltan las tres políticas de `products` para `authenticated` que sí
+   existen en la base de datos. Ver sección 3 bis para el inventario real.
 7. **Sin tests**, pese a que existe `TESTING.md`.
 8. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
    conflicto de peers. Solo es un aviso.
