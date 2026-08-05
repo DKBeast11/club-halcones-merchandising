@@ -70,14 +70,16 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<NewProduct>(initialNewProduct);
   const { isAuthenticated, user } = useAuth();
-  const { 
-    products, 
-    isLoading, 
-    error, 
-    addProduct: addProductSupabase, 
-    updateProduct: updateProductSupabase, 
-    deleteProduct: deleteProductSupabase, 
-    updateStock: updateStockSupabase 
+  const {
+    products,
+    categories,
+    isLoading,
+    error,
+    addProduct: addProductSupabase,
+    addCategory,
+    updateProduct: updateProductSupabase,
+    deleteProduct: deleteProductSupabase,
+    updateStock: updateStockSupabase
   } = useSupabase();
 
   // Los productos ahora se cargan automáticamente desde Supabase
@@ -127,6 +129,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const value: ProductContextType = {
     products,
+    categories,
     isLoading,
     error,
     isAdmin: isAuthenticated && !!user,
@@ -136,6 +139,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     editingProduct,
     newProduct,
     addProduct,
+    addCategory,
     updateProduct,
     deleteProduct,
     updateStock,

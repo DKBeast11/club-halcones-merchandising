@@ -2,13 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Product } from '@/types';
+import { adminFetch } from '@/lib/adminFetch';
+import { Category, Product } from '@/types';
 
 interface SupabaseContextType {
   products: Product[];
+  categories: Category[];
   isLoading: boolean;
   error: string | null;
   addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
+  addCategory: (name: string) => Promise<Category>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateStock: (productId: string, newStock: number) => Promise<void>;
@@ -19,8 +22,27 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined
 
 export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Cargar las categorías. La tabla tiene SELECT público, así que vale el
+  // cliente anónimo: la barra de filtros la ve todo el mundo, no solo el admin.
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, position')
+      .order('position', { ascending: true });
+
+    if (error) {
+      // Que falle la lista de categorías no puede tumbar el catálogo: sin ella
+      // la rejilla se sigue viendo entera, solo se queda sin filtros.
+      console.error('Error loading categories:', error);
+      return;
+    }
+
+    setCategories((data as Category[]) ?? []);
+  };
 
   // Cargar productos desde Supabase
   const loadProducts = async () => {
@@ -94,6 +116,34 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     await loadProducts();
 
     return data as Product;
+  };
+
+  // Dar de alta una categoría. Va por /api/admin/categories y no directo a la
+  // tabla porque RLS solo permite leer: escribir exige service_role, que vive
+  // en el servidor y solo se usa tras comprobar la sesión de admin.
+  const addCategory = async (name: string): Promise<Category> => {
+    setError(null);
+
+    const res = await adminFetch('/api/admin/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+
+    const body = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      const message = body?.error ?? 'No se ha podido crear la categoría.';
+      setError(message);
+      throw new Error(message);
+    }
+
+    const created = body as Category;
+    setCategories((prev) =>
+      [...prev, created].sort((a, b) => a.position - b.position)
+    );
+
+    return created;
   };
 
   // Actualizar producto
@@ -170,16 +220,19 @@ export const SupabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
-  // Cargar productos al montar el componente
+  // Cargar productos y categorías al montar el componente
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   const value: SupabaseContextType = {
     products,
+    categories,
     isLoading,
     error,
     addProduct,
+    addCategory,
     updateProduct,
     deleteProduct,
     updateStock,

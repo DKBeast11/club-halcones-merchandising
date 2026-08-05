@@ -1,7 +1,10 @@
 export interface Product {
   id: string; // UUID en la base de datos
   name: string;
-  category: 'parches' | 'camisetas' | 'llaveros' | 'miscelanea';
+  // Identificador de una fila de `categories`, no una lista cerrada: las
+  // categorías se dan de alta desde el panel y las valida la clave ajena
+  // products_category_fkey, no el tipo.
+  category: string;
   price: number;
   stock: number;
   image_url?: string;
@@ -11,10 +14,14 @@ export interface Product {
   updated_at?: string; // ISO string
 }
 
+/** Una fila de `categories`. */
 export interface Category {
+  /** Identificador en minúsculas y sin acentos: el que guarda products.category. */
   id: string;
+  /** Nombre presentable, con acentos y mayúsculas. */
   name: string;
-  icon: string;
+  /** Orden en la barra de filtros. Menor primero. */
+  position: number;
 }
 
 export interface StockStatus {
@@ -25,7 +32,7 @@ export interface StockStatus {
 
 export interface NewProduct {
   name: string;
-  category: 'parches' | 'camisetas' | 'llaveros' | 'miscelanea';
+  category: string;
   price: string;
   stock: string;
   image_url?: string;
@@ -42,6 +49,7 @@ export interface ProductImage {
 
 export interface ProductContextType {
   products: Product[];
+  categories: Category[];
   isLoading: boolean;
   error: string | null;
   isAdmin: boolean;
@@ -51,6 +59,7 @@ export interface ProductContextType {
   editingProduct: Product | null;
   newProduct: NewProduct;
   addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
+  addCategory: (name: string) => Promise<Category>;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   updateStock: (productId: string, newStock: number) => void;

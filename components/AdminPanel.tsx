@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
-import { Product } from '@/types';
 import { adminFetch } from '@/lib/adminFetch';
 
 interface NewProductForm {
@@ -15,11 +14,11 @@ interface NewProductForm {
   description: string;
 }
 
-const INITIAL_CATEGORIES = ['parches', 'camisetas', 'llaveros', 'miscelanea'];
-
 const EMPTY_FORM: NewProductForm = {
   name: '',
-  category: 'parches',
+  // Se rellena con la primera categoría de la tabla en cuanto carga; hasta
+  // entonces el desplegable sale vacío y el formulario no deja enviar.
+  category: '',
   price: '',
   stock: '',
   image_url: '',
@@ -27,13 +26,12 @@ const EMPTY_FORM: NewProductForm = {
 };
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin, addProduct } = useProducts();
+  const { isAdmin, categories, addProduct, addCategory } = useProducts();
 
   const [isOpen, setIsOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [categories, setCategories] = useState<string[]>(INITIAL_CATEGORIES);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
@@ -45,12 +43,16 @@ const AdminPanel: React.FC = () => {
   const set = <K extends keyof NewProductForm>(key: K, value: NewProductForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Mientras el formulario no haya tocado la categoría, manda la primera de la
+  // tabla. Así el desplegable nunca aparece en blanco si hay categorías.
+  const currentCategory = form.category || categories[0]?.id || '';
+
   const validate = (): boolean => {
     if (!form.name.trim()) {
       setFormError('El nombre del producto es obligatorio.');
       return false;
     }
-    if (!form.category) {
+    if (!currentCategory) {
       setFormError('La categoría es obligatoria.');
       return false;
     }
@@ -85,7 +87,7 @@ const AdminPanel: React.FC = () => {
     try {
       const created = await addProduct({
         name: form.name.trim(),
-        category: form.category as Product['category'],
+        category: currentCategory,
         price: Number(form.price),
         stock: Number(form.stock),
         image_url: form.image_url || undefined,
@@ -113,20 +115,29 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleAddCategory = () => {
-    const trimmed = newCategory.trim().toLowerCase();
+  // Antes esto solo añadía la categoría a un useState: el desplegable la
+  // mostraba, pero no existía en ninguna parte y la fila la rechazaba la base
+  // de datos al guardar el producto. Ahora se da de alta de verdad y queda
+  // disponible para el resto del catálogo.
+  const handleAddCategory = async () => {
+    const trimmed = newCategory.trim();
     if (!trimmed) return;
 
-    if (categories.includes(trimmed)) {
-      setFormError('Esa categoría ya existe.');
-      return;
-    }
-
-    setCategories((prev) => [...prev, trimmed]);
-    set('category', trimmed);
-    setNewCategory('');
-    setAddingCategory(false);
     setFormError(null);
+    setIsSubmitting(true);
+
+    try {
+      const created = await addCategory(trimmed);
+      set('category', created.id);
+      setNewCategory('');
+      setAddingCategory(false);
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : 'No se ha podido crear la categoría.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -181,7 +192,7 @@ const AdminPanel: React.FC = () => {
               {!addingCategory ? (
                 <select
                   id="p-category"
-                  value={form.category}
+                  value={currentCategory}
                   onChange={(e) =>
                     e.target.value === '__new__'
                       ? setAddingCategory(true)
@@ -192,8 +203,8 @@ const AdminPanel: React.FC = () => {
                   required
                 >
                   {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
                   <option value="__new__">+ Crear nueva categoría</option>

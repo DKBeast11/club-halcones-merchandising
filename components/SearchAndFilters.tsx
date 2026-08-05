@@ -4,16 +4,17 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { useProducts } from '@/context/ProductContext';
 
-const CATEGORIES = [
-  { id: 'all', name: 'Todo' },
-  { id: 'parches', name: 'Parches' },
-  { id: 'camisetas', name: 'Camisetas' },
-  { id: 'llaveros', name: 'Llaveros' },
-  { id: 'miscelanea', name: 'Miscelánea' },
-];
+/** "Todo" no es una categoría de la tabla: es el filtro vacío. */
+const ALL = { id: 'all', name: 'Todo' };
 
 const SearchAndFilters: React.FC = () => {
-  const { searchTerm, selectedCategory, setSearchTerm, setSelectedCategory } = useProducts();
+  const { categories, searchTerm, selectedCategory, setSearchTerm, setSelectedCategory } =
+    useProducts();
+
+  // Antes esta lista estaba escrita a mano aquí, así que una categoría nueva
+  // no llegaba nunca a la barra. Ahora sale de la tabla `categories`, con su
+  // nombre y su orden.
+  const filters = [ALL, ...categories];
 
   return (
     <section className="flex flex-wrap gap-3" aria-label="Búsqueda y filtros">
@@ -30,7 +31,7 @@ const SearchAndFilters: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por categoría">
-        {CATEGORIES.map((category) => (
+        {filters.map((category) => (
           <button
             key={category.id}
             type="button"
