@@ -267,10 +267,11 @@ fila en `categories`: aparece sola en el filtro, en la posición que le pongas.
 
 Por orden de lo que haría primero:
 
-1. **Prueba de extremo a extremo del gestor de imágenes.** Requiere contraseña,
-   así que la tiene que hacer una persona: entrar como admin → *Imágenes* en
-   cualquier tarjeta → ver miniaturas → subir y borrar una. Sería la primera vez
-   que eso funciona en local.
+1. **Prueba de extremo a extremo como admin.** Requiere contraseña, así que
+   la tiene que hacer una persona. Entrar como admin y: *Imágenes* en una
+   tarjeta → subir y borrar una (el carrusel de la tarjeta debe cambiar sin
+   recargar); +/- de stock; crear un producto con imagen y borrarlo; cerrar
+   sesión. Tras la fase 2 todo esto toca código nuevo.
 2. **Repaso visual de producción.** Ya fusionado y desplegado. Verificado por
    máquina (HTTP 200, variables bien incrustadas, `service_role` sin filtrar,
    rutas admin en 401), pero **nadie ha mirado la página con ojos**. Abrir
@@ -280,14 +281,28 @@ Por orden de lo que haría primero:
    plantearlo.** Ver la sección 3 bis: la anon key es pública por diseño, la
    `service_role` nunca estuvo en el historial, y RLS bloquea toda escritura
    anónima. Rotarla no gana seguridad y sí cuesta una caída.
-4. **Fase 2 — Estructura.** No empezada:
-   - Colapsar los 3 contextos anidados. `ProductContext` envuelve a
-     `SupabaseContext` sin aportar nada y mezcla estado de datos con estado de UI.
-   - Catálogo a Server Component. Hoy todo es cliente y los productos se piden en
-     un `useEffect` tras hidratar: se ve el layout vacío y luego aparecen.
-   - Separar `lib/supabase/client.ts` y `server.ts`.
-   - Reorganizar `components/` por dominio.
-   - Código muerto: `initialProducts` en `ProductContext.tsx:10-55`.
+4. ~~**Fase 2 — Estructura.**~~ **Hecha el 11-11-2026.**
+   - `app/page.tsx` es Server Component: lee el catálogo y la página sale ya
+     con las 24 tarjetas en el HTML. ISR de 60 s (los visitantes ven los
+     cambios del admin en menos de un minuto; el admin, al instante).
+     **Consecuencia:** el build lee Supabase, así que con el proyecto pausado
+     el despliegue falla. Por eso importa el cron de `/api/keepalive`.
+   - Un solo `CatalogContext` en vez de `ProductContext` + `SupabaseContext`.
+     Búsqueda y filtro son estado local de `MerchandiseCatalog`.
+     `isAdmin` sale de `useAuth()`.
+   - `lib/supabase/client.ts` (anon) y `lib/supabase/server.ts`
+     (`service_role`, protegido con `server-only`). Lectura compartida en
+     `lib/catalog.ts`.
+   - `components/` en `catalog/`, `admin/` y `ui/`.
+   - Bugs arreglados de paso: **cerrar sesión no cerraba la de Supabase Auth**
+     (el token seguía valiendo en ese navegador); el login intentaba darse de
+     alta en `admins` desde el cliente; un error al cambiar stock tapaba la
+     rejilla entera; con la sesión caducada, RLS bloqueaba el cambio de stock
+     sin error y se perdía en silencio; el carrusel no se refrescaba tras
+     subir o borrar imágenes.
+   - **Sin probar con sesión de admin** (necesita la contraseña): subir/bajar
+     stock, borrar, crear producto con imagen, gestor de imágenes y cerrar
+     sesión. Se suma a la prueba del punto 1.
 5. ~~**Fase 4 — Limpieza.**~~ **Hecha el 11-11-2026.** `README.md` reescrito
    según el código real. Borrados los 9 `.md` de andamiaje de la raíz (siguen
    en el historial de git si hicieran falta). `generated-images/`, `hooks/`,
@@ -298,7 +313,7 @@ Por orden de lo que haría primero:
    la tabla real **no tiene esa columna** (es `uuid, email, name, created_at`),
    y le faltan las tres políticas de `products` para `authenticated` que sí
    existen en la base de datos. Ver sección 3 bis para el inventario real.
-7. **Sin tests**, pese a que existe `TESTING.md`.
+7. **Sin tests.**
 8. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
    conflicto de peers. Solo es un aviso.
 
@@ -307,7 +322,6 @@ Por orden de lo que haría primero:
 ## 6. Cómo retomar
 
 ```bash
-git checkout rediseno/panel-de-vuelo
 npm install
 npm run dev          # http://localhost:3000
 npm run typecheck    # tsc --noEmit
