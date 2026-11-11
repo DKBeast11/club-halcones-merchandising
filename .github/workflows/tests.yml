@@ -47,8 +47,18 @@ jobs:
       - name: Unitarios
         run: npm run test:unit
 
+      # Sin --with-deps: ese modo instala paquetes por apt y depende de los
+      # mirrors de Ubuntu, que el 11-11-2026 tumbaron la CI por un fallo de
+      # DNS. La imagen ubuntu-latest ya trae las librerías que necesita
+      # Chromium; el navegador sale del CDN de Playwright y se cachea.
+      - name: Caché del navegador
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Navegador para los e2e
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       # El webServer de playwright.config.ts compila y arranca la app.
       - name: E2E de visitante
