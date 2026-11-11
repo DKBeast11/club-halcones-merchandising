@@ -1,9 +1,28 @@
 # Reorganización y rediseño de Club Halcones
 
-**Última sesión:** 2026-08-05
+**Última sesión:** 2026-11-11
 **Punto de partida:** `2c289fa` (21-oct-2025) — 2.084 líneas, 21 archivos
-**Estado:** fases 0, 1 y 3 hechas, más las categorías. La preview de Vercel
-construye y está en verde. Sigue **sin fusionar a `main`**.
+**Estado:** fases 0, 1, 3 y 4 hechas, más las categorías. Todo **fusionado a
+`main` y desplegado en producción**. Queda la fase 2 y dos comprobaciones a
+mano (sección 5).
+
+---
+
+## 0. ⚠ 2026-11-11: el proyecto de Supabase estaba pausado
+
+Tres meses sin actividad: el host no resolvía en DNS y producción servía la
+página sin productos. Se reanudó desde el panel ("Resume project"; la
+restauración tarda unos minutos y mientras tanto la API da **521**).
+
+Para que no se repita:
+
+- **`/api/keepalive`** + `crons` en `vercel.json`: Vercel la llama cada día a
+  las 06:00 UTC y hace una lectura mínima de `categories`. El plan gratuito
+  pausa tras unos 7 días sin actividad, así que una llamada diaria sobra.
+  Comprobar que aparece en Vercel → Settings → Cron Jobs tras el despliegue.
+- **`scripts/backup-catalog.mjs`**: copia tablas e imágenes en
+  `backups/AAAA-MM-DD/` (ignorado por git: las imágenes no van al repo).
+  Supabase no hace backups en el plan gratuito; esta es la única copia.
 
 ---
 
@@ -13,9 +32,9 @@ construye y está en verde. Sigue **sin fusionar a `main`**.
 
 | Rama | Estado | Qué es |
 |---|---|---|
-| `main` | `2c289fa`, intacta | Lo que hay en producción. No se ha tocado. |
-| `rediseno/panel-de-vuelo` | `a9a0355`, **subida** | Todo el trabajo. 8 commits. Preview en verde. |
-| `diseno/panel-de-parches` | `8f5095c`, **solo local** | Dirección visual descartada, sin desarrollar. ⚠ Se pierde si formateas: `git push -u origin diseno/panel-de-parches` |
+| `main` | **en producción** | Todo el trabajo fusionado. |
+| `rediseno/panel-de-vuelo` | `31768c8`, subida | Ya fusionada en `main`. Se puede borrar. |
+| `diseno/panel-de-parches` | `8f5095c`, **subida** el 11-11-2026 | Dirección visual descartada, sin desarrollar. Se guarda por si acaso. |
 
 Los commits de `rediseno/panel-de-vuelo` están ordenados para que **cada uno
 compile por separado** (toolchain → auth → interfaz). Si algún día haces bisect,
@@ -31,8 +50,7 @@ no hay puntos rotos.
   usa; se puede borrar.
 - **Tabla `categories`**: creada el 05-08-2026. Cuatro filas. `products.category`
   es ahora clave ajena contra ella, no un `CHECK`.
-- **Vercel**: producción desplegada desde `main` (último deploy: 21-oct-2025).
-  La preview de la rama **construye correctamente** desde el 05-08-2026.
+- **Vercel**: producción desplegada desde `main`, con el rediseño.
 
 ---
 
@@ -270,11 +288,11 @@ Por orden de lo que haría primero:
    - Separar `lib/supabase/client.ts` y `server.ts`.
    - Reorganizar `components/` por dominio.
    - Código muerto: `initialProducts` en `ProductContext.tsx:10-55`.
-5. **Fase 4 — Limpieza.** `README.md` describe persistencia en `localStorage` y
-   "contraseña visual": nada de eso es cierto desde que se migró a Supabase Auth.
-   Sobran 8 `.md` de andamiaje en la raíz (`PRUEBA_*.md`, `DEPLOY_STATUS.md`,
-   `GUIA_VERCEL_DEPLOY.md`, `INSTRUCCIONES_RAPIDAS.md`, `TESTING.md`,
-   `CONFIGURACION.md`). Decidir qué hacer con `generated-images/`.
+5. ~~**Fase 4 — Limpieza.**~~ **Hecha el 11-11-2026.** `README.md` reescrito
+   según el código real. Borrados los 9 `.md` de andamiaje de la raíz (siguen
+   en el historial de git si hicieran falta). `generated-images/`, `hooks/`,
+   `utils/supabase/`, `app/supabase/` y `app/api/_debug/` eran carpetas
+   vacías sin seguimiento en git: eliminadas.
 6. **Deriva entre `supabase/schema.sql` y la realidad.** Lo de las categorías ya
    está al día. Queda: el schema declara `admins.password_hash NOT NULL`, pero
    la tabla real **no tiene esa columna** (es `uuid, email, name, created_at`),

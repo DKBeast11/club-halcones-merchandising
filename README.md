@@ -1,176 +1,61 @@
-# Club Halcones - Merchandising Oficial 🛩️
+# Club Halcones · Merchandising
 
-Una aplicación web moderna para la gestión de catálogo de merchandising del Club Halcones, especializada en productos de F-18 y Eurofighter.
+Catálogo de merchandising del Club Halcones (parches, camisetas, llaveros y
+miscelánea), con un panel de administración para gestionar productos, stock e
+imágenes.
 
-> ⚠️ **Este README está desactualizado.** Describe una versión anterior que
-> guardaba los datos en `localStorage` y usaba una contraseña de administrador
-> en el propio código. Nada de eso es cierto desde que se migró a Supabase
-> (base de datos, autenticación y almacenamiento de imágenes).
->
-> Para el estado real del proyecto, lo que está hecho, lo que queda y las
-> trampas conocidas, ver:
-> **[`.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md`](.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md)**
->
-> Reescribir este archivo es parte de la Fase 4, todavía pendiente.
+Producción: https://club-halcones-merchandising.vercel.app
 
-## 🚀 Características
+## Cómo está hecho
 
-- **Catálogo de Productos**: Visualización completa de parches, camisetas y llaveros
-- **Panel de Administración**: Gestión completa de productos e inventario
-- **Búsqueda y Filtros**: Sistema de búsqueda por nombre/descripción y filtros por categoría
-- **Gestión de Stock**: Control de inventario en tiempo real
-- **Diseño Responsivo**: Optimizado para dispositivos móviles y desktop
-- **Persistencia Local**: Los datos se guardan automáticamente en el navegador
+| Pieza | Qué |
+|---|---|
+| Interfaz | Next.js 15 (App Router), React 19, Tailwind 3, `lucide-react` |
+| Datos | Supabase Postgres: `products`, `product_images`, `categories`, `admins` |
+| Imágenes | Supabase Storage, bucket público `Products` |
+| Acceso admin | Supabase Auth (correo y contraseña). El registro público está desactivado |
+| Despliegue | Vercel, desde `main` |
 
-## 🛠️ Tecnologías
+- **Lectura**: el catálogo usa la anon key, y RLS solo deja leer.
+- **Escritura de productos**: con la sesión del admin; RLS la permite a quien
+  está en la tabla `admins`.
+- **Imágenes y categorías**: pasan por `/api/admin/*`, que usa `service_role`
+  y por eso comprueba antes la sesión (`lib/auth/requireAdmin.ts`) y la lista
+  `ADMIN_EMAILS`.
+- **`/api/keepalive`**: Vercel la llama a diario (`crons` en `vercel.json`)
+  para que el plan gratuito de Supabase no pause el proyecto.
 
-- **Next.js 14** - Framework de React
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Estilos y diseño responsivo
-- **Lucide React** - Iconos modernos
-- **Context API** - Gestión de estado
+## Arrancar en local
 
-## 📱 Funcionalidades
-
-### Para Usuarios
-- Navegación por catálogo de productos
-- Búsqueda de productos por nombre o descripción
-- Filtrado por categorías (Parches, Camisetas, Llaveros)
-- Visualización de stock disponible
-- Interfaz optimizada para móviles
-
-### Para Administradores
-- Modo administrador con contraseña visual
-- Añadir nuevos productos al catálogo
-- Editar información de productos existentes
-- Control de stock (aumentar/disminuir inventario)
-- Eliminar productos del catálogo
-- Gestión de imágenes y descripciones
-
-## 🚀 Instalación y Uso
-
-1. **Instalar dependencias**:
-   ```bash
-   npm install
-   ```
-
-2. **Configurar variables de entorno**:
-   ```bash
-   # Copia el archivo de ejemplo
-   cp env.example .env.local
-   
-   # Edita .env.local con tus valores
-   # NEXT_PUBLIC_ADMIN_PASSWORD=tu_contraseña_secreta
-   # NEXT_PUBLIC_AUTO_LOGOUT_MINUTES=10
-   ```
-
-3. **Ejecutar en modo desarrollo**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Abrir en el navegador**:
-   ```
-   http://localhost:3000
-   ```
-
-5. **Compilar para producción**:
-   ```bash
-   npm run build
-   npm start
-   ```
-
-## 🔐 Sistema de Autenticación
-
-### Configuración de Seguridad
-- **Contraseña por defecto**: `F18-Eurofighter-2024`
-- **Logout automático**: 10 minutos de inactividad
-- **Persistencia**: La sesión se mantiene al recargar la página
-- **Seguridad**: Contraseña configurable via variables de entorno
-
-### Para Cambiar la Contraseña
-1. Edita el archivo `.env.local`
-2. Cambia `NEXT_PUBLIC_ADMIN_PASSWORD` por tu nueva contraseña
-3. Reinicia la aplicación
-
-### Características de Seguridad
-- ✅ Contraseña oculta en el campo de entrada
-- ✅ Logout automático por inactividad
-- ✅ Indicador visual de tiempo restante
-- ✅ Limpieza automática de datos al cerrar sesión
-- ✅ Validación de sesión al cargar la página
-
-## 📁 Estructura del Proyecto
-
-```
-├── app/                    # Páginas de Next.js
-│   ├── globals.css        # Estilos globales
-│   ├── layout.tsx         # Layout principal
-│   └── page.tsx           # Página principal
-├── components/            # Componentes React
-│   ├── AdminPanel.tsx     # Panel de administración
-│   ├── Header.tsx         # Cabecera de la aplicación
-│   ├── MerchandiseCatalog.tsx # Componente principal
-│   ├── ProductCard.tsx    # Tarjeta de producto
-│   ├── ProductGrid.tsx    # Grid de productos
-│   └── SearchAndFilters.tsx # Búsqueda y filtros
-├── context/               # Context API
-│   └── ProductContext.tsx # Contexto de productos
-├── types/                 # Tipos TypeScript
-│   └── index.ts          # Definiciones de tipos
-└── README.md             # Este archivo
+```bash
+cp env.example .env.local   # y rellenarlo; guardarlo en UTF-8, no UTF-16
+npm install
+npm run dev                 # http://localhost:3000
 ```
 
-## 🎨 Diseño
+Otras órdenes:
 
-La aplicación utiliza un diseño moderno con:
-- **Tema oscuro** para mejor experiencia visual
-- **Colores de aviación** (azules y grises)
-- **Iconos de aviones** para mantener la temática
-- **Animaciones suaves** para mejor UX
-- **Diseño responsivo** que se adapta a cualquier dispositivo
+```bash
+npm run typecheck                 # tsc --noEmit
+npm run build
+node scripts/backup-catalog.mjs   # copia de tablas e imágenes en backups/
+```
 
-## 📊 Gestión de Datos
+## Variables de entorno
 
-- Los productos se almacenan en **localStorage** del navegador
-- **Persistencia automática** de cambios
-- **Validación de datos** en formularios
-- **Estados de stock** (disponible, stock bajo, agotado)
+Ver `env.example`. En Vercel tienen que estar las mismas;
+`SUPABASE_SERVICE_ROLE_KEY` marcada como *Sensitive* y nunca con prefijo
+`NEXT_PUBLIC_`.
 
-## 🔧 Personalización
+## Base de datos
 
-### Añadir Nuevas Categorías
-1. Editar el array `categories` en `SearchAndFilters.tsx`
-2. Actualizar el tipo `Product` en `types/index.ts`
-3. Añadir opciones en el formulario de `AdminPanel.tsx`
+- `supabase/schema.sql`: esquema de referencia. **Ojo:** no coincide del todo
+  con la base de datos real (ver el documento de traspaso).
+- `supabase/migrations/`: cambios aplicados después.
 
-### Modificar Estilos
-- Los estilos se encuentran en `app/globals.css`
-- Utiliza clases de Tailwind CSS
-- Colores personalizados en `tailwind.config.js`
+## Estado del proyecto
 
-## 📱 Optimización Móvil
-
-- **Touch-friendly**: Botones y elementos optimizados para táctil
-- **Grid responsivo**: Se adapta de 1 a 4 columnas según el dispositivo
-- **Navegación intuitiva**: Fácil acceso a todas las funciones
-- **Carga rápida**: Optimizado para conexiones móviles
-
-## 🚀 Próximas Mejoras
-
-- [ ] Sistema de autenticación real
-- [ ] Base de datos backend
-- [ ] Sistema de pedidos
-- [ ] Integración con pasarela de pago
-- [ ] Panel de estadísticas
-- [ ] Notificaciones push
-- [ ] Modo offline
-
-## 📄 Licencia
-
-Este proyecto es propiedad del Club Halcones y está destinado para uso interno.
-
----
-
-**Club Halcones** - Merchandising Oficial F-18 & Eurofighter 🛩️
-
+El historial de decisiones, lo que queda pendiente y las trampas conocidas
+están en
+[`.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md`](.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md).
+Léelo antes de tocar Supabase o Vercel.
