@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import Header from './Header';
-import SearchAndFilters from './SearchAndFilters';
-import AdminPanel from './AdminPanel';
-import ProductGrid from './ProductGrid';
-import SessionStatus from './SessionStatus';
+import Header from '@/components/Header';
+import SearchAndFilters from '@/components/catalog/SearchAndFilters';
+import AdminPanel from '@/components/admin/AdminPanel';
+import ProductGrid from '@/components/catalog/ProductGrid';
+import SessionStatus from '@/components/admin/SessionStatus';
 import { useAuth } from '@/context/AuthContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { ALL_CATEGORIES } from '@/lib/catalog';

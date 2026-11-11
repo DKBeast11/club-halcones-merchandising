@@ -5,11 +5,11 @@ import { Product } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { getStockState } from '@/lib/stock';
-import ProductCarousel from './ProductCarousel';
-import StockAnnunciator from './StockAnnunciator';
-import AdminStockControls from './AdminStockControls';
-import ImageManager from './ImageManager';
-import Dialog from './ui/Dialog';
+import ProductCarousel from '@/components/catalog/ProductCarousel';
+import StockAnnunciator from '@/components/catalog/StockAnnunciator';
+import AdminStockControls from '@/components/admin/AdminStockControls';
+import ImageManager from '@/components/admin/ImageManager';
+import Dialog from '@/components/ui/Dialog';
 
 interface ProductCardProps {
   product: Product;

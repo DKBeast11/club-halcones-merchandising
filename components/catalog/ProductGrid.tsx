@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Package } from 'lucide-react';
-import ProductCard from './ProductCard';
+import ProductCard from '@/components/catalog/ProductCard';
 import { useCatalog } from '@/context/CatalogContext';
 import { ALL_CATEGORIES } from '@/lib/catalog';
 

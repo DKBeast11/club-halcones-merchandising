@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import Dialog from './ui/Dialog';
+import Dialog from '@/components/ui/Dialog';
 
 const AUTO_LOGOUT_MINUTES = process.env.NEXT_PUBLIC_AUTO_LOGOUT_MINUTES || '10';
 

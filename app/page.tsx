@@ -1,4 +1,4 @@
-import MerchandiseCatalog from '@/components/MerchandiseCatalog';
+import MerchandiseCatalog from '@/components/catalog/MerchandiseCatalog';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { fetchCatalog } from '@/lib/catalog';
 import { supabase } from '@/lib/supabase/client';

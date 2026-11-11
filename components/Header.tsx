@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import LoginModal from './LoginModal';
+import LoginModal from '@/components/admin/LoginModal';
 
 const Header: React.FC = () => {
   const { isAdmin, logout } = useAuth();
