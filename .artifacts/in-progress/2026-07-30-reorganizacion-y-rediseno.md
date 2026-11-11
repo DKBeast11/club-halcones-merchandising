@@ -26,6 +26,44 @@ Para que no se repita:
 
 ---
 
+## 0 bis. Tests (11-11-2026) y lo que destaparon
+
+**Playwright Test** para todo: `npm run test:unit` (19, ~3 s),
+`npm run test:e2e` (8, visitante, solo lectura) y `npm run test:admin` (8,
+el panel entero contra la BD real). La CI de GitHub Actions corre todo menos
+los de admin. Cómo escribir tests nuevos: skill `tests`
+(`.claude/skills/tests/SKILL.md`).
+
+**Cuenta de tests:** usuario de Supabase Auth `e2e-tests@club-halcones.test`,
+con fila en `admins`. Su contraseña solo está en `.env.local`. Está en
+`ADMIN_EMAILS` **solo en local**, no en Vercel. Para retirarla, se borra el
+usuario en Authentication y su fila de `admins`.
+
+**Bugs reales que encontraron los tests, ya arreglados:**
+
+- 🔴 **El panel no podía guardar nada en `products`.** Las políticas de
+  escritura consultan `admins`, pero `admins` tenía RLS sin ninguna política,
+  así que la subconsulta nunca veía filas. El alta fallaba con error. El
+  stock y el borrado fallaban **en silencio**: RLS no da error, simplemente
+  no toca filas. Arreglado con la política "Cada usuario ve su propia fila de
+  admins" (`supabase/migrations/20261111_admins_select_own_row.sql`, ya
+  aplicada).
+- Crear un producto con "URL de imagen" fallaba siempre: el alta mandaba
+  `image_url`, una columna que `products` no tiene.
+- Dos clics seguidos en +/− perdían uno. Ahora los ajustes son relativos y
+  van en cola por producto.
+- Borrar una imagen o un producto dejaba el fichero huérfano en el bucket.
+  Ahora se borra, salvo que otra fila use el mismo fichero (un producto dado
+  de alta "por URL" puede compartirlo). El borrado de producto pasa por
+  `/api/admin/products/[id]`.
+- `/api/admin/images?productId=x` devolvía 500 con un id mal formado; ahora 400.
+
+**Ficheros huérfanos anteriores:** en el bucket quedan 3 fotos de llaveros
+de 2025 sin fila que las use (`LLAVEROS/462_RBF_{PINK,RED,WHITE}_2.JPG`).
+No se han tocado: pueden ser fotos alternativas que se quieran añadir.
+
+---
+
 ## 1. Cómo está todo ahora mismo
 
 ### Ramas
@@ -158,6 +196,11 @@ las políticas se combinan con OR, de modo que una que nunca se cumple no
 concede nada, y las tres de `authenticated` son las que hacen el trabajo. Se
 puede borrar cuando se limpie el esquema, pero no corre prisa.
 
+> **Corrección del 11-11-2026.** Las tres de `authenticated` **no** hacían el
+> trabajo: su subconsulta sobre `admins` no veía filas porque `admins` no
+> tenía ninguna política. El panel no podía escribir en `products`. Ver la
+> sección 0 bis.
+
 **Comprobado con peticiones reales usando la anon key:** `INSERT` en `products`
 → 401 `42501`; `UPDATE` → 0 filas; `INSERT` en `categories` → bloqueado;
 lectura → 200. O sea, con la clave pública solo se puede leer.
@@ -267,11 +310,8 @@ fila en `categories`: aparece sola en el filtro, en la posición que le pongas.
 
 Por orden de lo que haría primero:
 
-1. **Prueba de extremo a extremo como admin.** Requiere contraseña, así que
-   la tiene que hacer una persona. Entrar como admin y: *Imágenes* en una
-   tarjeta → subir y borrar una (el carrusel de la tarjeta debe cambiar sin
-   recargar); +/- de stock; crear un producto con imagen y borrarlo; cerrar
-   sesión. Tras la fase 2 todo esto toca código nuevo.
+1. ~~**Prueba de extremo a extremo como admin.**~~ **Automatizada el
+   11-11-2026** (`npm run test:admin`, ver sección 0 bis). Pasa entera.
 2. **Repaso visual de producción.** Ya fusionado y desplegado. Verificado por
    máquina (HTTP 200, variables bien incrustadas, `service_role` sin filtrar,
    rutas admin en 401), pero **nadie ha mirado la página con ojos**. Abrir
@@ -300,20 +340,17 @@ Por orden de lo que haría primero:
      rejilla entera; con la sesión caducada, RLS bloqueaba el cambio de stock
      sin error y se perdía en silencio; el carrusel no se refrescaba tras
      subir o borrar imágenes.
-   - **Sin probar con sesión de admin** (necesita la contraseña): subir/bajar
-     stock, borrar, crear producto con imagen, gestor de imágenes y cerrar
-     sesión. Se suma a la prueba del punto 1.
+   - Probado con sesión de admin el 11-11-2026 con los tests automáticos
+     (sección 0 bis).
 5. ~~**Fase 4 — Limpieza.**~~ **Hecha el 11-11-2026.** `README.md` reescrito
    según el código real. Borrados los 9 `.md` de andamiaje de la raíz (siguen
    en el historial de git si hicieran falta). `generated-images/`, `hooks/`,
    `utils/supabase/`, `app/supabase/` y `app/api/_debug/` eran carpetas
    vacías sin seguimiento en git: eliminadas.
-6. **Deriva entre `supabase/schema.sql` y la realidad.** Lo de las categorías ya
-   está al día. Queda: el schema declara `admins.password_hash NOT NULL`, pero
-   la tabla real **no tiene esa columna** (es `uuid, email, name, created_at`),
-   y le faltan las tres políticas de `products` para `authenticated` que sí
-   existen en la base de datos. Ver sección 3 bis para el inventario real.
-7. **Sin tests.**
+6. ~~**Deriva entre `supabase/schema.sql` y la realidad.**~~ **Resuelta el
+   11-11-2026:** reescrito desde `pg_catalog` (tablas, índices, trigger y las
+   nueve políticas).
+7. ~~**Sin tests.**~~ **Resuelto el 11-11-2026.** Ver sección 0 bis.
 8. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
    conflicto de peers. Solo es un aviso.
 
