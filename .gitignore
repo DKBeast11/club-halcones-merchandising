@@ -40,3 +40,6 @@ INSTRUCCIONES_INSERCION_PRODUCTOS.js
 *.tsbuildinfo
 next-env.d.ts
 
+
+# copias del catalogo (scripts/backup-catalog.mjs): llevan imagenes, no van al repo
+/backups/
