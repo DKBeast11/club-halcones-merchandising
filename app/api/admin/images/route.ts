@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase/server';
 import { requireAdmin, unauthorized } from '@/lib/auth/requireAdmin';
 
 // Estas rutas usan el cliente service_role, que salta RLS: la comprobación de

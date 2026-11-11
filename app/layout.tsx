@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
-import { SupabaseProvider } from '@/context/SupabaseContext'
-import { ProductProvider } from '@/context/ProductContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next';
 
@@ -30,13 +28,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <AuthProvider>
-          <SupabaseProvider>
-            <ProductProvider>
-              {children}
-            </ProductProvider>
-          </SupabaseProvider>
-        </AuthProvider>
+        {/* El catálogo trae su propio provider desde app/page.tsx, con los
+            datos ya leídos en el servidor. Aquí solo queda la sesión. */}
+        <AuthProvider>{children}</AuthProvider>
         <SpeedInsights />
         <Analytics />
       </body>

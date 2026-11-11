@@ -2,14 +2,25 @@
 
 import React from 'react';
 import { Search } from 'lucide-react';
-import { useProducts } from '@/context/ProductContext';
+import { useCatalog } from '@/context/CatalogContext';
+import { ALL_CATEGORIES } from '@/lib/catalog';
 
-/** "Todo" no es una categoría de la tabla: es el filtro vacío. */
-const ALL = { id: 'all', name: 'Todo' };
+const ALL = { id: ALL_CATEGORIES, name: 'Todo' };
 
-const SearchAndFilters: React.FC = () => {
-  const { categories, searchTerm, selectedCategory, setSearchTerm, setSelectedCategory } =
-    useProducts();
+interface SearchAndFiltersProps {
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
+  selectedCategory: string;
+  onCategoryChange: (categoryId: string) => void;
+}
+
+const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
+  searchTerm,
+  onSearchTermChange,
+  selectedCategory,
+  onCategoryChange,
+}) => {
+  const { categories } = useCatalog();
 
   // Antes esta lista estaba escrita a mano aquí, así que una categoría nueva
   // no llegaba nunca a la barra. Ahora sale de la tabla `categories`, con su
@@ -24,7 +35,7 @@ const SearchAndFilters: React.FC = () => {
           type="search"
           placeholder="Buscar productos"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => onSearchTermChange(e.target.value)}
           aria-label="Buscar productos"
           className="w-full bg-transparent font-data text-[12.5px] text-legend placeholder-legend-dim focus:outline-none"
         />
@@ -36,7 +47,7 @@ const SearchAndFilters: React.FC = () => {
             key={category.id}
             type="button"
             aria-pressed={selectedCategory === category.id}
-            onClick={() => setSelectedCategory(category.id)}
+            onClick={() => onCategoryChange(category.id)}
             className="legend-btn"
           >
             {category.name}

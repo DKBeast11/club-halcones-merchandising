@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Product } from '@/types';
-import { useProducts } from '@/context/ProductContext';
+import { useAuth } from '@/context/AuthContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { getStockState } from '@/lib/stock';
 import ProductCarousel from './ProductCarousel';
 import StockAnnunciator from './StockAnnunciator';
@@ -17,7 +18,8 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) => {
-  const { isAdmin, updateStock, deleteProduct } = useProducts();
+  const { isAdmin } = useAuth();
+  const { updateStock, deleteProduct, refresh } = useCatalog();
   const [managingImages, setManagingImages] = useState(false);
 
   const isOut = getStockState(product.stock) === 'agotado';
@@ -75,7 +77,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) 
         subtitle={product.name}
         size="lg"
       >
-        <ImageManager productId={product.id} />
+        {/* Al cambiar las imágenes se refresca el catálogo; si no, el carrusel
+            de la tarjeta seguía enseñando las de antes hasta recargar. */}
+        <ImageManager productId={product.id} onImagesChanged={refresh} />
       </Dialog>
     </article>
   );

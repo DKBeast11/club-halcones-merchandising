@@ -1,5 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Cliente con la anon key. Vale en el navegador y en el servidor: es pública
+// por diseño y RLS solo le deja leer el catálogo. Lo que escribe con él el
+// panel de administración lo autoriza la sesión de Supabase Auth del admin,
+// no la clave.
+//
+// El cliente con service_role vive aparte, en ./server.ts, para que no pueda
+// colarse en el bundle del navegador.
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -19,13 +27,3 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Cliente con service_role para operaciones de servidor: salta RLS, así que
-// cualquier ruta que lo use tiene que comprobar por su cuenta quién llama.
-// La clave no lleva prefijo NEXT_PUBLIC_ a propósito: nunca debe llegar al
-// navegador.
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-export const supabaseAdmin = supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null

@@ -2,13 +2,11 @@
 
 import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
-import { useProducts } from '@/context/ProductContext';
 import { useAuth } from '@/context/AuthContext';
 import LoginModal from './LoginModal';
 
 const Header: React.FC = () => {
-  const { isAdmin } = useProducts();
-  const { logout } = useAuth();
+  const { isAdmin, logout } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
 
   return (

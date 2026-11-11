@@ -10,9 +10,11 @@ const MAX_IMAGES = 5;
 
 interface ImageManagerProps {
   productId: string;
+  /** Tras subir o borrar alguna, para que el resto de la página se entere. */
+  onImagesChanged?: () => void;
 }
 
-const ImageManager: React.FC<ImageManagerProps> = ({ productId }) => {
+const ImageManager: React.FC<ImageManagerProps> = ({ productId, onImagesChanged }) => {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
@@ -86,6 +88,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({ productId }) => {
 
         setStatus(`${uploaded} imagen(es) subida(s).`);
         await fetchImages();
+        onImagesChanged?.();
         setTimeout(() => setStatus(''), 3000);
       } else {
         setStatus('');
@@ -104,6 +107,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({ productId }) => {
       const res = await adminFetch(`/api/admin/images/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setImages((prev) => prev.filter((i) => i.id !== id));
+        onImagesChanged?.();
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || 'No se ha podido eliminar la imagen.');

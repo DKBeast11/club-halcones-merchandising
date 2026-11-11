@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { useProducts } from '@/context/ProductContext';
+import { useAuth } from '@/context/AuthContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { adminFetch } from '@/lib/adminFetch';
 
 interface NewProductForm {
@@ -26,7 +27,8 @@ const EMPTY_FORM: NewProductForm = {
 };
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin, categories, addProduct, addCategory } = useProducts();
+  const { isAdmin } = useAuth();
+  const { categories, addProduct, addCategory, refresh } = useCatalog();
 
   const [isOpen, setIsOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -111,6 +113,11 @@ const AdminPanel: React.FC = () => {
         err instanceof Error ? err.message : 'No se ha podido guardar el producto.'
       );
     } finally {
+      // Se refresca al final, cuando la imagen ya está registrada: antes se
+      // recargaba justo tras crear el producto y la tarjeta nueva salía con
+      // la imagen de relleno. También si falla la imagen, porque el
+      // producto sí existe ya.
+      await refresh();
       setIsSubmitting(false);
     }
   };

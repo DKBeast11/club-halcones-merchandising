@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { AlertTriangle, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 import ProductCard from './ProductCard';
-import { useProducts } from '@/context/ProductContext';
+import { useCatalog } from '@/context/CatalogContext';
+import { ALL_CATEGORIES } from '@/lib/catalog';
 
 /** Tarjetas de la primera fila: cargan su imagen con prioridad. */
 const PRIORITY_COUNT = 4;
 
-const ProductGrid: React.FC = () => {
-  const { products, isLoading, error, searchTerm, selectedCategory } = useProducts();
+interface ProductGridProps {
+  searchTerm: string;
+  selectedCategory: string;
+}
+
+const ProductGrid: React.FC<ProductGridProps> = ({ searchTerm, selectedCategory }) => {
+  const { products } = useCatalog();
 
   const visibleProducts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -20,7 +26,7 @@ const ProductGrid: React.FC = () => {
         product.name.toLowerCase().includes(term) ||
         (product.description?.toLowerCase().includes(term) ?? false);
       const matchesCategory =
-        selectedCategory === 'all' || product.category === selectedCategory;
+        selectedCategory === ALL_CATEGORIES || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
 
@@ -32,26 +38,8 @@ const ProductGrid: React.FC = () => {
     });
   }, [products, searchTerm, selectedCategory]);
 
-  if (error) {
-    return (
-      <section className="engraved flex flex-col items-center gap-2 px-6 py-14 text-center">
-        <AlertTriangle className="h-8 w-8 text-signal-red" aria-hidden="true" />
-        <p className="legend-text text-signal-red">No se ha podido cargar el catálogo</p>
-        <p className="max-w-md font-data text-[11px] text-legend-dim">{error}</p>
-      </section>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <section className="engraved px-6 py-14 text-center" aria-live="polite">
-        <p className="legend-text text-legend-dim">Cargando catálogo…</p>
-      </section>
-    );
-  }
-
   if (visibleProducts.length === 0) {
-    const filtering = searchTerm.trim() !== '' || selectedCategory !== 'all';
+    const filtering = searchTerm.trim() !== '' || selectedCategory !== ALL_CATEGORIES;
     return (
       <section className="engraved flex flex-col items-center gap-2 px-6 py-14 text-center">
         <Package className="h-8 w-8 text-legend-dim" aria-hidden="true" />

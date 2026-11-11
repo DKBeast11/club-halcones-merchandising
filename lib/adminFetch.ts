@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 /**
  * `fetch` para las rutas de /api/admin: adjunta el token de la sesión actual

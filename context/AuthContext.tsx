@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -14,6 +14,8 @@ interface AuthContextType {
   isLoading: boolean;
   lastActivity: number;
   user: { email: string; uuid: string } | null;
+  /** Hay sesión de admin: muestra los controles de edición. */
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateActivity: () => void;
@@ -29,10 +31,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading: false,
     lastActivity: Date.now()
   });
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [user, setUser] = useState<{ email: string; uuid: string } | null>(null);
 
-  // Login usando Supabase y la tabla admins
+  // Login con Supabase Auth (correo y contraseña)
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setAuthState((prev) => ({ ...prev, isLoading: true }));
     try {
@@ -43,16 +44,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(null);
         return false;
       }
-      // Guardar UUID en admins si no existe
+      // Antes aquí el propio navegador se daba de alta en `admins` si no
+      // estaba. Quién es admin se decide en la base de datos, no lo declara
+      // el cliente.
       const uuid = data.user.id;
-      const { data: adminExists } = await supabase
-        .from('admins')
-        .select('uuid')
-        .eq('uuid', uuid)
-        .single();
-      if (!adminExists) {
-        await supabase.from('admins').insert({ uuid, email });
-      }
       setAuthState({
         isAuthenticated: true,
         isLoading: false,
@@ -67,19 +62,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  // Logout: eliminar sesión en Supabase
+  // Hay que cerrar la sesión de Supabase Auth, no solo el estado local. Antes
+  // solo se hacía lo segundo: la interfaz volvía a modo visitante, pero el
+  // token seguía guardado en el navegador y seguía valiendo para escribir y
+  // para /api/admin. Lo mismo con el cierre automático por inactividad.
   const logout = useCallback(async () => {
-    if (sessionToken) {
-      await supabase.from('admin_sessions').delete().eq('session_token', sessionToken);
-    }
-    setSessionToken(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Error al cerrar la sesión de Supabase:', error.message);
     setAuthState({
       isAuthenticated: false,
       isLoading: false,
       lastActivity: Date.now()
     });
     setUser(null);
-  }, [sessionToken]);
+  }, []);
 
   // Función para actualizar la actividad
   const updateActivity = useCallback(() => {
@@ -133,6 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading: authState.isLoading,
     lastActivity: authState.lastActivity,
     user,
+    isAdmin: authState.isAuthenticated && !!user,
     login,
     logout,
     updateActivity

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 // El plan gratuito de Supabase pausa el proyecto tras unos días sin
 // actividad, y con él cae el catálogo entero: el host deja hasta de resolver
