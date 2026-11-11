@@ -2,15 +2,14 @@
  * Verificación de administrador para las rutas de /api/admin.
  *
  * Contexto de por qué está hecho así (comprobado el 30-07-2026 contra el
- * proyecto real):
+ * proyecto real; revisado el 11-11-2026):
  *
- * - La autoridad es **Supabase Auth**, no la tabla `admins`. Esa tabla viene
- *   del sistema de login artesanal que se sustituyó por Supabase Auth y está
- *   vacía: gatear por ella dejaría fuera a todo el mundo. Queda pendiente de
- *   adoptarla en condiciones (con columna de rol) o eliminarla.
+ * - La autoridad es **Supabase Auth**: se valida el token contra Supabase.
+ *   La tabla `admins` la usan las políticas RLS de `products`, no esta
+ *   función: las rutas de /api/admin usan service_role, que salta RLS.
  * - En el proyecto está **desactivado el registro público** ("Allow new users
- *   to sign up" = off) y existe un único usuario. Por tanto el conjunto de
- *   quien puede autenticarse es cerrado y lo administra el dueño del proyecto.
+ *   to sign up" = off). Solo hay dos usuarios: el admin y la cuenta de los
+ *   tests e2e. El conjunto de quien puede autenticarse es cerrado.
  *
  * Ese segundo punto es la invariante de la que depende la seguridad de esto.
  * Si algún día se reactiva el registro público, "estar autenticado" dejaría de

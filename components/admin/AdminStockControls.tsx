@@ -8,7 +8,8 @@ import { Image as ImageIcon, Trash2 } from 'lucide-react';
 interface AdminStockControlsProps {
   stock: number;
   productName: string;
-  onStockChange: (newStock: number) => void;
+  /** Unidades a sumar (o restar, si es negativo). */
+  onAdjustStock: (delta: number) => void;
   onManageImages: () => void;
   onDelete: () => void;
 }
@@ -18,7 +19,7 @@ const STEPS = [-10, -1, 1, 10];
 const AdminStockControls: React.FC<AdminStockControlsProps> = ({
   stock,
   productName,
-  onStockChange,
+  onAdjustStock,
   onManageImages,
   onDelete,
 }) => {
@@ -33,7 +34,7 @@ const AdminStockControls: React.FC<AdminStockControlsProps> = ({
             key={step}
             type="button"
             aria-label={`Restar ${Math.abs(step)} ${Math.abs(step) === 1 ? 'unidad' : 'unidades'} de stock`}
-            onClick={() => onStockChange(Math.max(0, stock + step))}
+            onClick={() => onAdjustStock(step)}
             disabled={stock <= 0}
             className="engraved font-data text-[11px] px-2.5 py-1.5 text-signal-red transition-colors hover:bg-signal-red hover:text-panel disabled:opacity-30 disabled:hover:bg-panel-engrave disabled:hover:text-signal-red"
           >
@@ -51,7 +52,7 @@ const AdminStockControls: React.FC<AdminStockControlsProps> = ({
             key={step}
             type="button"
             aria-label={`Sumar ${step} ${step === 1 ? 'unidad' : 'unidades'} de stock`}
-            onClick={() => onStockChange(stock + step)}
+            onClick={() => onAdjustStock(step)}
             className="engraved font-data text-[11px] px-2.5 py-1.5 text-signal-green transition-colors hover:bg-signal-green hover:text-panel"
           >
             +{step}

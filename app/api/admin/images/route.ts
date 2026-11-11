@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { requireAdmin, unauthorized } from '@/lib/auth/requireAdmin';
+import { PRODUCTS_BUCKET as BUCKET } from '@/lib/storage';
 
 // Estas rutas usan el cliente service_role, que salta RLS: la comprobación de
 // quién llama la tienen que hacer ellas mismas, antes que nada.
 
-// El catálogo entero vive en `Products` (público desde el 30-07-2026). La ruta
-// subía a un `product-images` aparte, que quedaba vacío y descolgado del resto.
-const BUCKET = 'Products';
+// El catálogo entero vive en `Products` (lib/storage.ts). La ruta subía a un
+// `product-images` aparte, que quedaba vacío y descolgado del resto.
+
+// Los ids son UUID. Uno mal formado es un error de quien llama (400), no del
+// servidor: antes llegaba a Postgres y volvía como 500.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const badProductId = () => NextResponse.json({ error: 'Invalid product ID' }, { status: 400 });
 
 export async function GET(request: Request) {
   if (!(await requireAdmin(request))) return unauthorized();
@@ -15,6 +20,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get('productId');
   if (!productId) return NextResponse.json([], { status: 200 });
+  if (!UUID.test(productId)) return badProductId();
 
   if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
 
@@ -52,6 +58,7 @@ export async function POST(request: Request) {
     if (!productId) {
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
+    if (!UUID.test(productId)) return badProductId();
 
     let finalUrl = imageUrl ?? '';
 

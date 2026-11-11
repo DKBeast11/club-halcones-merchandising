@@ -23,7 +23,6 @@ interface ProductRow {
   category: string;
   price: number | string;
   stock: number;
-  image_url: string | null;
   description: string | null;
   created_at: string;
   updated_at: string;
@@ -38,7 +37,10 @@ function toProduct(row: ProductRow): Product {
     // NUMERIC llega como string desde PostgREST.
     price: typeof row.price === 'string' ? parseFloat(row.price) : row.price,
     stock: row.stock,
-    image_url: row.image_url || PLACEHOLDER_IMAGE,
+    // `products` no tiene columna image_url (comprobado contra la base de
+    // datos el 11-11-2026): las imágenes viven en product_images. Este campo
+    // es solo el relleno que enseña el carrusel cuando no hay ninguna.
+    image_url: PLACEHOLDER_IMAGE,
     images: row.product_images?.map((img) => ({ ...img, product_id: row.id })),
     description: row.description || '',
     created_at: row.created_at,

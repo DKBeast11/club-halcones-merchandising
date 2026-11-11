@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { adminFetch } from '@/lib/adminFetch';
 import { fetchCatalog, type Catalog } from '@/lib/catalog';
@@ -31,7 +31,8 @@ interface CatalogContextType extends Catalog {
   /** Crea el producto. No refresca: quien llama sube antes la imagen. */
   addProduct: (product: NewProductInput) => Promise<Product>;
   addCategory: (name: string) => Promise<Category>;
-  updateStock: (productId: string, newStock: number) => Promise<void>;
+  /** Suma (o resta, con delta negativo) unidades al stock. Nunca baja de 0. */
+  adjustStock: (productId: string, delta: number) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
 }
 
@@ -74,7 +75,9 @@ export function CatalogProvider({ initial, children }: { initial: Catalog; child
           category: input.category,
           price: input.price,
           stock: input.stock,
-          image_url: input.image_url,
+          // Sin image_url: la columna no existe en `products` y PostgREST
+          // rechazaba el alta entera si el formulario traía una URL. La
+          // imagen se registra después en product_images.
           description: input.description,
         },
       ])
@@ -101,24 +104,57 @@ export function CatalogProvider({ initial, children }: { initial: Catalog; child
     return created;
   }, []);
 
-  // Se actualiza solo la fila tocada en vez de recargar el catálogo entero
-  // en cada pulsación de +/-.
-  const updateStock = useCallback(
-    async (productId: string, newStock: number) => {
-      const stock = Math.max(0, newStock);
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .update({ stock })
-          .eq('id', productId)
-          .select('id');
-        if (error) throw new Error(error.message);
-        if (!data?.length) throw new Error(NO_ROWS);
+  // Ajuste relativo del stock (+1, -10…), con la cifra a la vista al momento.
+  //
+  // Antes cada pulsación mandaba un valor absoluto calculado con el stock que
+  // pintaba la tarjeta. Dos clics seguidos salían del mismo valor y se perdía
+  // uno: de 8, "-1" dos veces dejaba 7. Ahora:
+  //  - cada clic suma sobre el último objetivo pedido, no sobre lo pintado;
+  //  - las escrituras de un producto van en cola, en orden, y si se acumulan
+  //    varias solo se manda la última (el valor final es el mismo);
+  //  - si una falla, la cifra vuelve al último valor que confirmó la base de
+  //    datos y sale el aviso.
+  const productsRef = useRef(products);
+  productsRef.current = products;
+  const stockTarget = useRef(new Map<string, number>());
+  const stockConfirmed = useRef(new Map<string, number>());
+  const stockQueue = useRef(new Map<string, Promise<void>>());
 
-        setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, stock } : p)));
-      } catch (err) {
-        fail(err, 'No se ha podido actualizar el stock.');
-      }
+  const setStock = (productId: string, stock: number) =>
+    setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, stock } : p)));
+
+  const adjustStock = useCallback(
+    (productId: string, delta: number) => {
+      const shown = productsRef.current.find((p) => p.id === productId)?.stock ?? 0;
+      if (!stockConfirmed.current.has(productId)) stockConfirmed.current.set(productId, shown);
+
+      const target = Math.max(0, (stockTarget.current.get(productId) ?? shown) + delta);
+      stockTarget.current.set(productId, target);
+      setStock(productId, target);
+
+      const write = async () => {
+        // Ya hay un objetivo más nuevo en la cola: lo mandará su propia tarea.
+        if (stockTarget.current.get(productId) !== target) return;
+        try {
+          const { data, error } = await supabase
+            .from('products')
+            .update({ stock: target })
+            .eq('id', productId)
+            .select('id');
+          if (error) throw new Error(error.message);
+          if (!data?.length) throw new Error(NO_ROWS);
+          stockConfirmed.current.set(productId, target);
+        } catch (err) {
+          const confirmed = stockConfirmed.current.get(productId)!;
+          stockTarget.current.delete(productId);
+          setStock(productId, confirmed);
+          fail(err, 'No se ha podido actualizar el stock.');
+        }
+      };
+
+      const queued = (stockQueue.current.get(productId) ?? Promise.resolve()).then(write);
+      stockQueue.current.set(productId, queued);
+      return queued;
     },
     [fail]
   );
@@ -126,14 +162,15 @@ export function CatalogProvider({ initial, children }: { initial: Catalog; child
   const deleteProduct = useCallback(
     async (productId: string) => {
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', productId)
-          .select('id');
-        if (error) throw new Error(error.message);
-        if (!data?.length) throw new Error(NO_ROWS);
-
+        // Por la API y no directo a la tabla: así se borran también los
+        // ficheros de sus imágenes, que con la sesión del admin no se puede.
+        const res = await adminFetch(`/api/admin/products/${productId}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(
+            res.status === 401 ? NO_ROWS : (body?.error ?? 'No se ha podido eliminar el producto.')
+          );
+        }
         setProducts((prev) => prev.filter((p) => p.id !== productId));
       } catch (err) {
         fail(err, 'No se ha podido eliminar el producto.');
@@ -151,10 +188,10 @@ export function CatalogProvider({ initial, children }: { initial: Catalog; child
       refresh,
       addProduct,
       addCategory,
-      updateStock,
+      adjustStock,
       deleteProduct,
     }),
-    [products, categories, actionError, refresh, addProduct, addCategory, updateStock, deleteProduct]
+    [products, categories, actionError, refresh, addProduct, addCategory, adjustStock, deleteProduct]
   );
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

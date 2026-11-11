@@ -19,7 +19,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) => {
   const { isAdmin } = useAuth();
-  const { updateStock, deleteProduct, refresh } = useCatalog();
+  const { adjustStock, deleteProduct, refresh } = useCatalog();
   const [managingImages, setManagingImages] = useState(false);
 
   const isOut = getStockState(product.stock) === 'agotado';
@@ -64,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) 
         <AdminStockControls
           stock={product.stock}
           productName={product.name}
-          onStockChange={(newStock) => updateStock(product.id, newStock)}
+          onAdjustStock={(delta) => adjustStock(product.id, delta)}
           onManageImages={() => setManagingImages(true)}
           onDelete={() => deleteProduct(product.id)}
         />
