@@ -17,6 +17,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# El workflow solo lee el repositorio.
+permissions:
+  contents: read
+
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
@@ -50,13 +54,8 @@ jobs:
       # Sin --with-deps: ese modo instala paquetes por apt y depende de los
       # mirrors de Ubuntu, que el 11-11-2026 tumbaron la CI por un fallo de
       # DNS. La imagen ubuntu-latest ya trae las librerías que necesita
-      # Chromium; el navegador sale del CDN de Playwright y se cachea.
-      - name: Caché del navegador
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
+      # Chromium. Sin caché a propósito: un navegador restaurado de caché es
+      # código que nadie ha verificado, y descargarlo cuesta segundos.
       - name: Navegador para los e2e
         run: npx playwright install chromium
 
