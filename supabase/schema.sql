@@ -1,10 +1,21 @@
--- Esquema de base de datos para Club Halcones Merchandising
+-- Esquema de Club Halcones Merchandising.
+--
+-- Refleja la base de datos REAL, sacada de pg_catalog el 11-11-2026 (tablas,
+-- columnas, restricciones, índices, triggers y políticas). Sirve para montar
+-- un proyecto nuevo desde cero o para entender el actual. Los cambios
+-- posteriores van en supabase/migrations/ y se copian también aquí.
+--
+-- Lo que había antes en este fichero describía el sistema de login artesanal
+-- (admins con password_hash, sesiones propias) y ya no se parecía a la base
+-- de datos.
 
--- Tabla de categorías. Sustituye al CHECK que antes cerraba
--- products.category a cuatro valores escritos a mano.
--- Ver supabase/migrations/20260805_categories_table.sql.
+-- ---------------------------------------------------------------------------
+-- Categorías
+-- ---------------------------------------------------------------------------
+
 CREATE TABLE categories (
-  -- Identificador en minúsculas y sin acentos: 'miscelanea'.
+  -- Identificador en minúsculas y sin acentos: 'miscelanea'. Es lo que
+  -- guarda products.category.
   id VARCHAR(50) PRIMARY KEY,
   -- Nombre presentable, con acentos: 'Miscelánea'.
   name VARCHAR(80) NOT NULL,
@@ -19,153 +30,150 @@ INSERT INTO categories (id, name, position) VALUES
   ('llaveros',   'Llaveros',   3),
   ('miscelanea', 'Miscelánea', 4);
 
--- Tabla de productos
+-- ---------------------------------------------------------------------------
+-- Productos
+-- ---------------------------------------------------------------------------
+
+-- Sin columna image_url: las imágenes viven en product_images.
 CREATE TABLE products (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
-  category VARCHAR(50) NOT NULL REFERENCES categories(id) ON UPDATE CASCADE ON DELETE RESTRICT,
-  price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+  category VARCHAR(50) NOT NULL
+    REFERENCES categories(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
   stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  image_url TEXT,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Tabla de administradores (para autenticación)
-CREATE TABLE admins (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(255),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  last_login TIMESTAMP WITH TIME ZONE
-);
+CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX idx_products_stock ON products(stock);
 
--- Tabla de sesiones de administrador
-CREATE TABLE admin_sessions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  admin_id UUID REFERENCES admins(id) ON DELETE CASCADE,
-  session_token VARCHAR(255) UNIQUE NOT NULL,
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
--- Trigger para actualizar updated_at en products
-CREATE TRIGGER update_products_updated_at 
-  BEFORE UPDATE ON products 
-  FOR EACH ROW 
+CREATE TRIGGER update_products_updated_at
+  BEFORE UPDATE ON products
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Índices para mejorar rendimiento
-CREATE INDEX idx_products_category ON products(category);
-CREATE INDEX idx_products_stock ON products(stock);
-CREATE INDEX idx_admin_sessions_token ON admin_sessions(session_token);
-CREATE INDEX idx_admin_sessions_expires ON admin_sessions(expires_at);
-
--- Nueva tabla para almacenar múltiples imágenes por producto
+-- Hasta 5 por producto (lo limita la interfaz, no la base de datos).
+-- Los ficheros están en el bucket público `Products` de Storage. Al borrar una
+-- imagen o un producto, /api/admin/* borra también el fichero si ninguna otra
+-- fila lo usa.
 CREATE TABLE product_images (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   image_url TEXT NOT NULL,
   position INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Índice para consultas rápidas por product_id y orden por posición
 CREATE INDEX idx_product_images_product_id ON product_images(product_id);
 CREATE INDEX idx_product_images_product_id_position ON product_images(product_id, position);
 
--- Política: permitir lectura pública de imágenes asociadas a productos
+-- ---------------------------------------------------------------------------
+-- Administradores
+-- ---------------------------------------------------------------------------
+
+-- Quién es admin. `uuid` es el id del usuario en Supabase Auth. Las políticas
+-- de escritura de `products` miran aquí. Las altas se hacen a mano (SQL), no
+-- desde la aplicación.
+--
+-- Además, /api/admin/* exige que el correo esté en la variable ADMIN_EMAILS.
+CREATE TABLE admins (
+  uuid UUID PRIMARY KEY,
+  email VARCHAR NOT NULL,
+  name VARCHAR,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Restos del login artesanal anterior a Supabase Auth. La aplicación ya no
+-- la usa y está vacía. Se puede borrar junto con su política y la política
+-- "Products are modifiable by admins only" de products.
+CREATE TABLE admin_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID,
+  session_token VARCHAR(255) NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_admin_sessions_token ON admin_sessions(session_token);
+CREATE INDEX idx_admin_sessions_expires ON admin_sessions(expires_at);
+
+-- ---------------------------------------------------------------------------
+-- RLS
+-- ---------------------------------------------------------------------------
+--
+-- Resumen: sin sesión solo se lee el catálogo. Con sesión de un usuario que
+-- está en `admins`, se escribe en `products`. Lo demás (imágenes, categorías,
+-- borrar productos con sus ficheros) pasa por /api/admin/*, que usa
+-- service_role tras comprobar la sesión. No hay políticas de Storage: solo
+-- service_role escribe en el bucket.
+
+ALTER TABLE categories     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
--- Crear policy de lectura pública de forma idempotente y segura
-DO $$
-BEGIN
-  -- Solo intentar crear la policy si la tabla product_images existe
-  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'product_images') THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_policies WHERE policyname IN (
-        'product_images_viewable_by_everyone',
-        'Product images are viewable by everyone'
-      )
-    ) THEN
-      CREATE POLICY product_images_viewable_by_everyone ON product_images
-        FOR SELECT USING (true);
-    END IF;
-  END IF;
-END$$;
-
--- Insertar imágenes de ejemplo vinculadas a los productos insertados arriba
--- Nota: para los UUIDs de ejemplo, asumimos que los productos anteriores tienen ids generados; en un entorno real deberías usar los ids reales.
-INSERT INTO product_images (product_id, image_url, position) VALUES
-((SELECT id FROM products WHERE name = 'Parche F-18 Super Hornet' LIMIT 1), 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop', 0),
-((SELECT id FROM products WHERE name = 'Camiseta Eurofighter Typhoon' LIMIT 1), 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&fit=crop', 0),
-((SELECT id FROM products WHERE name = 'Llavero F-18 Metálico' LIMIT 1), 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=800&fit=crop', 0),
-((SELECT id FROM products WHERE name = 'Parche Escuadrón Ala 15' LIMIT 1), 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop', 0);
-
--- Políticas de seguridad (RLS)
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admins         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
 
--- Política para productos: todos pueden leer
-CREATE POLICY "Products are viewable by everyone" ON products
-  FOR SELECT USING (true);
-
--- Las categorías se leen sin sesión, igual que el catálogo. No hay política de
--- escritura a propósito: darlas de alta pasa por /api/admin/categories, que
--- usa service_role (salta RLS) después de comprobar la sesión de admin.
 CREATE POLICY "Las categorías se leen sin sesión" ON categories
   FOR SELECT USING (true);
 
--- Política para productos: solo admins pueden modificar
+CREATE POLICY "Products are viewable by everyone" ON products
+  FOR SELECT USING (true);
+
+CREATE POLICY product_images_viewable_by_everyone ON product_images
+  FOR SELECT USING (true);
+
+CREATE POLICY "Admins can insert products" ON products
+  FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM admins
+    WHERE admins.uuid = ((current_setting('request.jwt.claims', true))::json ->> 'sub')::uuid
+  ));
+
+CREATE POLICY "Admins can update products" ON products
+  FOR UPDATE TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM admins
+    WHERE admins.uuid = ((current_setting('request.jwt.claims', true))::json ->> 'sub')::uuid
+  ));
+
+CREATE POLICY "Admins can delete products" ON products
+  FOR DELETE TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM admins
+    WHERE admins.uuid = ((current_setting('request.jwt.claims', true))::json ->> 'sub')::uuid
+  ));
+
+-- Imprescindible para las tres de arriba: su subconsulta sobre `admins` se
+-- evalúa con el RLS de `admins`, y sin esta política no veía ninguna fila.
+-- Ver supabase/migrations/20261111_admins_select_own_row.sql.
+CREATE POLICY "Cada usuario ve su propia fila de admins" ON admins
+  FOR SELECT TO authenticated
+  USING (uuid = auth.uid());
+
+-- Legado: nunca se cumple (admin_sessions está vacía). Como las políticas se
+-- combinan con OR, no concede ni quita nada.
 CREATE POLICY "Products are modifiable by admins only" ON products
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM admin_sessions 
-      WHERE session_token = current_setting('request.jwt.claims', true)::json->>'session_token'
-      AND expires_at > NOW()
-    )
-  );
+  FOR ALL
+  USING (EXISTS (
+    SELECT 1 FROM admin_sessions
+    WHERE admin_sessions.session_token = (current_setting('request.jwt.claims', true))::json ->> 'session_token'
+      AND admin_sessions.expires_at > NOW()
+  ));
 
--- Política para admins: solo pueden ver su propio perfil
-CREATE POLICY "Admins can view own profile" ON admins
-  FOR SELECT USING (
-    id = (
-      SELECT admin_id FROM admin_sessions 
-      WHERE session_token = current_setting('request.jwt.claims', true)::json->>'session_token'
-      AND expires_at > NOW()
-    )
-  );
-
--- Política para sesiones: solo pueden ver sus propias sesiones
 CREATE POLICY "Admins can view own sessions" ON admin_sessions
-  FOR SELECT USING (
-    admin_id = (
-      SELECT admin_id FROM admin_sessions 
-      WHERE session_token = current_setting('request.jwt.claims', true)::json->>'session_token'
-      AND expires_at > NOW()
-    )
+  FOR SELECT
+  USING (
+    (current_setting('request.jwt.claims', true))::json ->> 'session_token' = session_token
+    AND expires_at > NOW()
   );
-
--- Insertar datos iniciales
-INSERT INTO products (name, category, price, stock, image_url, description) VALUES
-('Parche F-18 Super Hornet', 'parches', 12.99, 25, 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop', 'Parche bordado oficial del F-18 Super Hornet'),
-('Camiseta Eurofighter Typhoon', 'camisetas', 24.99, 15, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop', 'Camiseta negra con diseño del Eurofighter Typhoon'),
-('Llavero F-18 Metálico', 'llaveros', 8.99, 3, 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop', 'Llavero metálico con forma de F-18'),
-('Parche Escuadrón Ala 15', 'parches', 10.99, 0, 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop', 'Parche oficial del Escuadrón Ala 15');
-
--- Crear usuario administrador por defecto (contraseña: F18-Eurofighter-2024)
--- Nota: En producción, deberías usar un hash real de la contraseña
-INSERT INTO admins (email, password_hash, name) VALUES
-('admin@clubhalcones.com', '$2a$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA', 'Administrador Principal');
