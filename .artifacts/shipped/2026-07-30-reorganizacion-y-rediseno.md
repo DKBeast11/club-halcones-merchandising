@@ -2,9 +2,21 @@
 
 **Última sesión:** 2026-11-11
 **Punto de partida:** `2c289fa` (21-oct-2025) — 2.084 líneas, 21 archivos
-**Estado:** fases 0, 1, 3 y 4 hechas, más las categorías. Todo **fusionado a
-`main` y desplegado en producción**. Queda la fase 2 y dos comprobaciones a
-mano (sección 5).
+**Estado:** ✅ **terminado y en producción.** Fases 0 a 4 hechas, más las
+categorías y los tests automáticos (unitarios, e2e y CI). Lo que queda son
+mejoras menores, ninguna bloqueante (sección 5, "Pendientes menores").
+
+### Resumen de la sesión del 11-11-2026
+
+1. Supabase estaba pausado y producción salía sin productos: reactivado, más
+   un cron diario (`/api/keepalive`) y un script de copia del catálogo
+   (sección 0).
+2. Fase 4 (limpieza de documentación) y fase 2 (catálogo en servidor, un solo
+   contexto, `lib/supabase` partido, `components/` por dominio).
+3. Tests automáticos con Playwright Test y CI en GitHub Actions. Destaparon
+   que **el panel no podía guardar nada en `products`** por RLS, y otros
+   cuatro bugs. Todos arreglados (sección 0 bis).
+4. `supabase/schema.sql` reescrito desde la base de datos real.
 
 ---
 
@@ -354,6 +366,27 @@ Por orden de lo que haría primero:
 8. `caniuse-lite` 10 meses desactualizado; `update-browserslist-db` falla por un
    conflicto de peers. Solo es un aviso.
 
+### Pendientes menores (a 11-11-2026)
+
+Ninguno bloquea. Por orden de utilidad:
+
+- **Repaso visual de producción por una persona** (punto 2). Las capturas de
+  la sesión en local se veían bien, pero nadie ha mirado producción con ojos.
+- **3 fotos sin usar en el bucket:** `LLAVEROS/462_RBF_{PINK,RED,WHITE}_2.JPG`
+  (de 2025, ninguna fila las usa). Decidir si se asignan a sus llaveros como
+  segunda foto o se borran.
+- **Restos del login antiguo:** la tabla `admin_sessions` (vacía), su
+  política y la política "Products are modifiable by admins only", que nunca
+  se cumple. Se pueden borrar con una migración.
+- **Vercel marca los Cron Jobs como "Legacy"** y propone migrar a Schedules.
+  Funciona; migrar cuando lo retiren.
+- **`next lint` está obsoleto** y desaparece en Next 16: migrar a la CLI de
+  ESLint (`npx @next/codemod@canary next-lint-to-eslint-cli .`).
+- La rama `rediseno/panel-de-vuelo` ya está fusionada: se puede borrar.
+- **Reutilizar el servidor de los e2e:** si hay algo escuchando en el puerto
+  3100, Playwright lo reutiliza y prueba un build viejo. Mátalo tras cambiar
+  código.
+
 ---
 
 ## 6. Cómo retomar
@@ -363,7 +396,14 @@ npm install
 npm run dev          # http://localhost:3000
 npm run typecheck    # tsc --noEmit
 npm run build
+npm test             # unitarios + e2e de visitante
+npm run test:admin   # panel de admin (necesita la cuenta de tests en .env.local)
+node scripts/backup-catalog.mjs   # copia del catálogo en backups/
 ```
+
+Si Supabase vuelve a estar pausado (la API da 521 o el host no resuelve):
+panel de Supabase → "Resume project" y esperar unos minutos. El cron debería
+evitarlo.
 
 Si el build falla quejándose de variables de entorno, el mensaje te dice qué
 hacer en local y en Vercel.

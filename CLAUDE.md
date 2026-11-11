@@ -4,7 +4,7 @@ Catálogo de merchandising: Next.js 15 + Supabase (Postgres, Auth, Storage),
 desplegado en Vercel desde `main`.
 
 - **Estado, decisiones y trampas conocidas**:
-  `.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md`. Léelo
+  `.artifacts/shipped/2026-07-30-reorganizacion-y-rediseno.md`. Léelo
   antes de tocar Supabase, Vercel o RLS.
 - **Tests**: skill `tests` (`.claude/skills/tests/SKILL.md`). Todo cambio de
   código va con su test, y todo bug arreglado con su test de regresión.

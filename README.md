@@ -79,5 +79,5 @@ Ver `env.example`. En Vercel tienen que estar las mismas;
 
 El historial de decisiones, lo que queda pendiente y las trampas conocidas
 están en
-[`.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md`](.artifacts/in-progress/2026-07-30-reorganizacion-y-rediseno.md).
+[`.artifacts/shipped/2026-07-30-reorganizacion-y-rediseno.md`](.artifacts/shipped/2026-07-30-reorganizacion-y-rediseno.md).
 Léelo antes de tocar Supabase o Vercel.
