@@ -1,0 +1,63 @@
+name: Tests
+
+# En cada push a main y en cada PR: tipos, lint, unitarios, build y los e2e
+# de visitante (solo lectura contra el Supabase real).
+#
+# Los e2e de admin NO corren aquí: escriben en la base de datos de verdad y
+# necesitarían la contraseña de la cuenta de tests en GitHub. Se lanzan en
+# local con `npm run test:admin`.
+#
+# Secretos del repositorio que hacen falta (Settings > Secrets > Actions):
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Son los mismos valores públicos que van incrustados en la web.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unitarios
+        run: npm run test:unit
+
+      - name: Navegador para los e2e
+        run: npx playwright install --with-deps chromium
+
+      # El webServer de playwright.config.ts compila y arranca la app.
+      - name: E2E de visitante
+        run: npm run test:e2e
+
+      - name: Informe si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

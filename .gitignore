@@ -43,3 +43,10 @@ next-env.d.ts
 
 # copias del catalogo (scripts/backup-catalog.mjs): llevan imagenes, no van al repo
 /backups/
+
+# tests (Playwright)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+.playwriter-eval.js
